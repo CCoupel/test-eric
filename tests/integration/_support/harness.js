@@ -12,9 +12,15 @@ export async function makeApp(options = {}) {
   process.env.NODE_ENV = 'test';
   process.env.SESSION_SECRET = SESSION_SECRET;
   process.env.APP_BASE_URL = BASE_URL;
+  // Limite par IP+activité (anti-remplissage) relevée pour les tests qui inscrivent beaucoup depuis la même IP ;
+  // le test dédié (creation/ratelimit-activite.test.js) la ramène à une valeur basse via options.env.
+  process.env.RATE_LIMIT_REGISTRATION_PER_ACTIVITY_10MIN = '1000';
+  Object.assign(process.env, options.env ?? {});
+  const appOptions = { ...options };
+  delete appOptions.env;
   vi.resetModules();
   const { createApp } = await import('../../../src/server/app.js');
-  const app = createApp(options);
+  const app = createApp(appOptions);
   return { app, pool: app.locals.pool };
 }
 

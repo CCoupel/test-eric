@@ -10,7 +10,7 @@ describe.skipIf(!hasDb)('Inscription - gestion par token', () => {
   let activity;
   beforeAll(async () => {
     ctx = await setup();
-    activity = await newActivity(ctx, { capacity: 5 });
+    activity = await newActivity(ctx, { capacity: 50 });
   });
   afterAll(() => closeApp(ctx));
 
