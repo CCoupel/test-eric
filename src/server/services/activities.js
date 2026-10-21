@@ -85,7 +85,7 @@ export async function createActivity(pool, config, ownerId, input) {
 }
 
 /** Verrou `FOR UPDATE` sur l'activité : sérialise avec les inscriptions (qui verrouillent la même ligne). */
-async function lockActivity(db, id) {
+export async function lockActivity(db, id) {
   if (!UUID.test(id)) throw notFound('Activité');
   const { rows } = await db.query(
     'SELECT id, status, (SELECT count(*)::int FROM registrations r WHERE r.activity_id = a.id) AS registrations_count FROM activities a WHERE a.id = $1 FOR UPDATE OF a',

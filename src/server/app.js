@@ -31,8 +31,8 @@ export const REDACT_PATHS = [
 /** Masque les tokens de gestion dans les URLs journalisées (le token donne accès aux données d'un participant, parfois mineur). */
 export function maskUrl(url = '') {
   return String(url)
-    .replace(/^(\/api\/public\/registrations\/)[^/?#]*/, '$1[redacted]')
-    .replace(/^(\/r\/)[^/?#]*/, '$1[redacted]');
+    .replace(/^(\/api\/public\/registrations\/)[^/?#]*/i, '$1[redacted]') // Express route sans tenir compte de la casse
+    .replace(/^(\/r\/)[^/?#]*/i, '$1[redacted]');
 }
 const serializers = { req: pino.stdSerializers.wrapRequestSerializer((r) => ({ ...r, url: maskUrl(r.url) })) };
 

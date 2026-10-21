@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { parse } from '../errors.js';
 import { requireSession } from '../middleware/session.js';
 import * as svc from '../services/activities.js';
+import { removeRegistrationAsManager } from '../services/registrations.js';
 
 export function activityRoutes({ config, pool }) {
   const router = Router();
@@ -37,6 +38,16 @@ export function activityRoutes({ config, pool }) {
     // Accès aux données personnelles des inscrits : tracé (qui, quelle activité, combien) — aucune donnée personnelle.
     req.log.info({ event: 'registrations_viewed', userId: req.user.id, activityId: req.params.id, count: result.count }, 'accès aux inscrits');
     res.json(result);
+  });
+
+  router.delete('/:id/registrations/:registrationId', async (req, res) => {
+    await removeRegistrationAsManager(pool, req.params.id, req.params.registrationId);
+    // Tracé sans donnée personnelle : qui a supprimé quoi.
+    req.log.info(
+      { event: 'registration_removed_by_manager', userId: req.user.id, activityId: req.params.id, registrationId: req.params.registrationId },
+      'suppression d’une inscription par un responsable',
+    );
+    res.status(204).end();
   });
 
   return router;

@@ -95,6 +95,12 @@ Objet `Activity` :
 ```
 **Errors** : 401, 404
 
+### DELETE /api/activities/:id/registrations/:registrationId
+**Auth** : Session (+ `Origin` vérifié) — suppression physique d'une inscription par un responsable (droit à l'effacement :
+lien de gestion perdu, demande reçue du parent) avec anonymisation des historiques d'envoi liés, dans une transaction.
+**Response 204** — **Errors** : 401, 403 (Origin), 404 (activité inconnue **ou** inscription n'appartenant pas à cette activité, ou déjà supprimée).
+Journalisé (`registration_removed_by_manager` : userId, activityId, registrationId — aucune donnée personnelle).
+
 ---
 
 ## Inscription publique (issue #6)

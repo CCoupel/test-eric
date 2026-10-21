@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { ipKeyGenerator, rateLimit } from 'express-rate-limit';
 import { HttpError, parse } from '../errors.js';
 import * as svc from '../services/registrations.js';
+import { SLUG_RE } from '../services/registrations.js';
 
 const tooMany = (msg) => (req, _res, next) => {
   req.log.warn({ event: 'public_rate_limited', ip: req.ip, path: req.route?.path }, 'public');
@@ -22,7 +23,7 @@ export function publicRoutes({ config, pool }) {
   const registerIp = limiter(60_000, lim.registrationPerIpPerMin, tooMany(msg));
   // Anti-remplissage : limite plus stricte par IP + activité (slug), en plus de la limite par IP.
   const registerActivity = limiter(10 * 60_000, lim.registrationPerActivityPer10Min, tooMany(msg), (req) =>
-    `${ipKeyGenerator(req.ip)}|${String(req.params.slug).slice(0, 32)}`,
+    `${ipKeyGenerator(req.ip)}|${SLUG_RE.test(req.params.slug) ? req.params.slug : 'invalid'}`,
   );
 
   router.get('/activities/:slug', view, async (req, res) => {

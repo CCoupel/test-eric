@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { consentText } from '../consent.js';
 import { withTx } from '../db/tx.js';
 import { conflict, notFound } from '../errors.js';
+import { lockActivity } from './activities.js';
 
 export const SLUG_RE = /^[0-9A-Za-z]{12}$/;
 export const TOKEN_RE = /^[A-Za-z0-9_-]{43}$/; // 32 octets en base64url
@@ -183,6 +184,24 @@ export async function deleteByToken(pool, token, log) {
     return found.activity_id;
   });
   log?.info({ event: 'registration_deleted', activityId }, 'désinscription');
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Suppression d'une inscription par un responsable (exercice des droits : lien perdu, demande par e-mail) :
+ * même suppression physique + anonymisation transactionnelle que la désinscription publique.
+ * 404 si l'activité n'existe pas ou si l'inscription n'appartient pas à cette activité.
+ */
+export async function removeRegistrationAsManager(pool, activityId, registrationId) {
+  await withTx(pool, async (db) => {
+    await lockActivity(db, activityId); // 404 si activité inconnue ; sérialise avec les inscriptions
+    if (!UUID.test(registrationId)) throw notFound('Inscription');
+    const found = (await db.query('SELECT id FROM registrations WHERE id = $1 AND activity_id = $2 FOR UPDATE', [registrationId, activityId])).rows[0];
+    if (!found) throw notFound('Inscription');
+    await anonymizeRecipients(db, [found.id]);
+    await db.query('DELETE FROM registrations WHERE id = $1', [found.id]);
+  });
 }
 
 /** Purge RGPD : inscriptions des activités terminées depuis plus de `retentionMonths` mois. Idempotent. */
