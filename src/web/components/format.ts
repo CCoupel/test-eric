@@ -14,3 +14,8 @@ export function toLocalInput(iso: string): string {
   const p = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
+
+const longDateTime = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'full', timeStyle: 'short' });
+
+/** « mercredi 28 octobre 2026 à 14:00 ». */
+export const formatLongDateTime = (iso: string): string => longDateTime.format(new Date(iso));

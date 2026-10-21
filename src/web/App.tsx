@@ -5,8 +5,11 @@ import { ActivitiesPage } from './pages/ActivitiesPage';
 import { ActivityDetailPage } from './pages/ActivityDetailPage';
 import { ActivityNewPage } from './pages/ActivityNewPage';
 import { LoginPage } from './pages/LoginPage';
+import { ManageRegistrationPage } from './pages/ManageRegistrationPage';
+import { PrivacyPage } from './pages/PrivacyPage';
+import { PublicActivityPage } from './pages/PublicActivityPage';
 
-export function App() {
+function PrivateApp() {
   return (
     <AuthProvider>
       <Routes>
@@ -19,5 +22,17 @@ export function App() {
         <Route path="*" element={<Navigate to="/activities" replace />} />
       </Routes>
     </AuthProvider>
+  );
+}
+
+export function App() {
+  // Pages publiques hors AuthProvider : aucun appel /api/auth/me pour les participants.
+  return (
+    <Routes>
+      <Route path="/a/:slug" element={<PublicActivityPage />} />
+      <Route path="/r/:token" element={<ManageRegistrationPage />} />
+      <Route path="/confidentialite" element={<PrivacyPage />} />
+      <Route path="/*" element={<PrivateApp />} />
+    </Routes>
   );
 }
