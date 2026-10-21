@@ -1,7 +1,8 @@
 import { Router } from 'express';
-import { ipKeyGenerator, rateLimit } from 'express-rate-limit';
+import { rateLimit } from 'express-rate-limit';
 import { z } from 'zod';
 import { HttpError, parse } from '../errors.js';
+import { FailureLimiter } from '../middleware/failure-limiter.js';
 import { requireSession } from '../middleware/session.js';
 import { COOKIE_NAME, authenticate, cookieOptions, normalizeEmail, publicUser, revokeSessions, signSession } from '../services/auth.js';
 
@@ -26,33 +27,24 @@ export function authRoutes({ config, pool, loginLimit = config.authLimits.loginP
     },
   });
 
-  // Anti-bruteforce ciblé : `loginEmailLimit` échecs / 15 min par e-mail normalisé (les succès ne comptent pas).
-  const emailLimiter = rateLimit({
-    windowMs: 15 * 60_000,
-    limit: loginEmailLimit,
-    skipSuccessfulRequests: true,
-    standardHeaders: false,
-    legacyHeaders: false,
-    keyGenerator: (req) => {
-      // Exécuté avant la validation zod : clé bornée à 254 car. (RFC 5321) pour ne pas gonfler le store avec des chaînes géantes.
-      const email = req.body?.email;
-      return typeof email === 'string' && email.trim()
-        ? `email:${normalizeEmail(email.slice(0, 254 + 64)).slice(0, 254)}`
-        : ipKeyGenerator(req.ip);
-    },
-    handler: (req, _res, next) => {
-      req.log.warn({ event: 'login_rate_limited', ip: req.ip, scope: 'email' }, 'auth');
-      next(new HttpError(429, 'rate_limited', 'Trop d’échecs pour ce compte, réessayez plus tard'));
-    },
-  });
+  // Anti-bruteforce ciblé : `loginEmailLimit` ÉCHECS / 15 min par e-mail normalisé. Seuls les échecs d'authentification comptent
+  // (pas les requêtes en vol) : 10 connexions valides simultanées ne déclenchent jamais le blocage.
+  const failures = new FailureLimiter({ limit: loginEmailLimit, windowMs: 15 * 60_000 });
 
-  router.post('/login', limiter, emailLimiter, async (req, res) => {
+  router.post('/login', limiter, async (req, res) => {
     const { email, password } = parse(loginSchema, req.body ?? {});
+    const key = normalizeEmail(email); // email déjà borné à 254 car. par le schéma
+    if (failures.isBlocked(key)) {
+      req.log.warn({ event: 'login_rate_limited', ip: req.ip, scope: 'email' }, 'auth');
+      throw new HttpError(429, 'rate_limited', 'Trop d’échecs pour ce compte, réessayez plus tard');
+    }
     const user = await authenticate(pool, email, password);
     if (!user) {
+      failures.fail(key);
       req.log.warn({ event: 'login_failed', ip: req.ip }, 'auth'); // jamais l'e-mail en clair
       throw new HttpError(401, 'invalid_credentials', 'E-mail ou mot de passe incorrect');
     }
+    failures.reset(key);
     req.log.info({ event: 'login_ok', userId: user.id }, 'auth');
     res.cookie(COOKIE_NAME, signSession(user, config), cookieOptions(config));
     res.json({ user: publicUser(user) });

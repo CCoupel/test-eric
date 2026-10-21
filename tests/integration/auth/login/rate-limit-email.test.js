@@ -42,3 +42,29 @@ describe.skipIf(!hasDb)('Auth - cle du limiteur par e-mail', () => {
     for (const email of [12345, ['a@b.fr'], { $ne: null }, null]) expect((await send(email)).status).toBe(400);
   });
 });
+
+// App neuve, limiteur par IP releve : seul le limiteur par e-mail est en jeu.
+describe.skipIf(!hasDb)('Auth - limiteur par e-mail : seuls les echecs comptent', () => {
+  let ctx;
+  beforeAll(async () => {
+    ctx = await makeApp({ env: { RATE_LIMIT_LOGIN_PER_IP_MIN: '1000' } });
+    await resetData(ctx.pool);
+    await createUser(ctx.pool, { email: 'conc@club.fr', password: 'motdepasse-solide-1' });
+  });
+  afterAll(() => closeApp(ctx));
+
+  it('15 connexions valides simultanees du meme e-mail : aucun 429', async () => {
+    const results = await Promise.all(
+      Array.from({ length: 15 }, () => request(ctx.app).post('/api/auth/login').send({ email: 'conc@club.fr', password: 'motdepasse-solide-1' })),
+    );
+    expect(results.map((r) => r.status)).toEqual(Array(15).fill(200));
+  });
+
+  it('5 echecs puis le 6e essai (bon mot de passe) -> 429 ; un succes remet le compteur a zero avant', async () => {
+    const send = (password) => request(ctx.app).post('/api/auth/login').send({ email: 'conc@club.fr', password });
+    for (let i = 0; i < 4; i++) expect((await send(`faux-${i}`)).status).toBe(401);
+    expect((await send('motdepasse-solide-1')).status).toBe(200); // reset
+    for (let i = 0; i < 5; i++) expect((await send(`faux-${i}`)).status).toBe(401);
+    expectError(await send('motdepasse-solide-1'), 429, 'rate_limited');
+  });
+});
