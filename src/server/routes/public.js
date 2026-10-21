@@ -39,7 +39,7 @@ export function publicRoutes({ config, pool }) {
   router.post('/activities/:slug/registrations', registerIp, registerActivity, async (req, res) => {
     await svc.findPublicActivity(pool, req.params.slug); // 404 (inconnu / brouillon) avant la validation du corps
     const input = parse(svc.createRegistrationSchema, req.body ?? {});
-    if (input.website) {
+    if (input.hp_extra) {
       req.log.warn({ event: 'registration_honeypot', ip: req.ip }, 'public');
       return res.status(201).json(svc.fakeRegistration(config, input)); // le robot croit avoir réussi
     }

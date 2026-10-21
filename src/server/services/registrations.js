@@ -28,7 +28,11 @@ const email = z
   .max(254, '254 caractères maximum')
   .pipe(z.email('adresse e-mail invalide'));
 
-/** `website` = honeypot (champ masqué dans le formulaire) : un humain le laisse vide. */
+/**
+ * `hp_extra` = honeypot (champ masqué du formulaire, nom volontairement opaque) : un humain le laisse vide.
+ * `website` = ancien nom du honeypot, désormais TOLÉRÉ ET IGNORÉ : le navigateur le remplissait par saisie automatique
+ * (nom/libellé « site web »), ce qui transformait de vraies inscriptions en faux succès.
+ */
 export const createRegistrationSchema = z
   .strictObject({
     participant_name: cleanName(120),
@@ -36,7 +40,8 @@ export const createRegistrationSchema = z
     contact_name: cleanName(120).optional(),
     contact_email: email,
     consent: z.literal(true, 'le consentement est obligatoire'),
-    website: z.string().max(200).optional(),
+    hp_extra: z.string().max(200).optional(),
+    website: z.string().max(200).optional(), // déprécié, ignoré
   })
   .superRefine((v, ctx) => {
     if (v.is_minor && !v.contact_name) ctx.addIssue({ code: 'custom', path: ['contact_name'], message: 'requis pour un mineur (parent / tuteur)' });

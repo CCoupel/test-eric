@@ -2,6 +2,11 @@
 
 > Changements de contrats (API, schemas) : `BREAKING` | `CHANGED` | `ADDED`. Lu par le CDP au GATE 2.
 
+## [20261021d] — Honeypot renommé (bug QUALIF 0.1.0.4)
+
+- **[CHANGED]** `POST /api/public/activities/:slug/registrations` — honeypot `website` → `hp_extra` ; `website` toléré et ignoré (la saisie automatique
+  du navigateur le remplissait : inscriptions légitimes transformées en faux succès)
+
 ## [20261021c] — Inscription publique (issue #6, exigences security + décisions utilisateur)
 
 - **[ADDED]** `POST /api/public/activities/:slug/registrations` — champ optionnel `website` (honeypot) ; limites 20/min/IP et 10/10 min/IP+activité
