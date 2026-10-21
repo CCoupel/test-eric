@@ -4,6 +4,14 @@ import { defineConfig } from '@playwright/test';
 const port = process.env.APP_PORT ?? '3000';
 const externalUrl = process.env.E2E_BASE_URL;
 
+// Serveur local lancé par Playwright : secrets et compte admin d'E2E (valeurs de test uniquement, jamais QUALIF/PROD).
+// Posés dans process.env pour que le serveur ET les specs (workers) voient les mêmes identifiants.
+if (!externalUrl) {
+  process.env.SESSION_SECRET ??= 'e2e-only-session-secret-e2e-only-session-secret';
+  process.env.ADMIN_EMAIL ??= 'e2e-admin@club.test';
+  process.env.ADMIN_PASSWORD ??= 'e2e-admin-password-1';
+}
+
 export default defineConfig({
   testDir: 'e2e',
   testMatch: '**/*.spec.ts',
