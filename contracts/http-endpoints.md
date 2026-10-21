@@ -117,7 +117,10 @@ Objet `Activity` :
 ```
 - `is_minor = false` → `contact_name` ignoré, copié depuis `participant_name`.
 - `is_minor = true` → `contact_name` obligatoire (parent / tuteur) ; l'e-mail est celui du parent.
-- `consent` doit valoir `true`.
+- `consent` doit valoir `true` (booléen strict) ; `consent_at` / `consent_version` sont posés par le serveur.
+- `website` (optionnel) : **honeypot** — champ masqué du formulaire, laissé vide par un humain. Rempli : réponse `201` factice,
+  rien n'est enregistré. Tout autre champ non déclaré → `400 validation_error`.
+- Limites : 20/min/IP **et** 10 / 10 min / IP / activité (`429 rate_limited`). `GET|DELETE …/registrations/:token` : 30/min/IP ; fiche publique : 60/min/IP.
 **Response 201** :
 ```json
 { "registration": { "id", "participant_name", "is_minor", "contact_name", "contact_email", "created_at" },

@@ -71,6 +71,11 @@ Champs calculés (jamais stockés) : `registrations_count` (inscriptions actives
 - Unicité : `(activity_id, contact_email, lower(participant_name))` — un parent peut inscrire plusieurs enfants.
 - Capacité : insertion dans une transaction avec `SELECT … FOR UPDATE` sur l'activité ; refus `409` si complet.
 - Désinscription = `DELETE` de la ligne (suppression des données personnelles, critère #6).
+- Conservation : les inscriptions sont supprimées physiquement `RETENTION_MONTHS` mois après `activities.starts_at`
+  (purge idempotente, mêmes anonymisations que la désinscription). Chaque consultation de la liste des inscrits par un
+  responsable est journalisée (événement `registrations_viewed` : id responsable, id activité, nombre — aucune donnée personnelle).
+- Anonymisation (désinscription ET purge), dans la transaction du DELETE : `mailing_recipients.registration_id`, `email` **et `error`**
+  (les erreurs SMTP contiennent l'adresse) passent à `NULL`.
 - Le token de gestion (32 octets, base64url) n'est **jamais stocké en clair** : renvoyé une seule fois à la
   création (réponse + page de confirmation), puis par e-mail de confirmation si SMTP configuré (lot #7).
 
@@ -122,6 +127,8 @@ Champs calculés (jamais stockés) : `registrations_count` (inscriptions actives
 | `APP_PORT` | non | `3000` | port HTTP |
 | `APP_BASE_URL` | oui | `http://localhost:3000` | construction des liens publics ; **origine du navigateur** : seule `Origin` autorisée sur les mutations, et `Secure` du cookie si `https://` (en dev avec Vite : `http://localhost:5173`) |
 | `TRUST_PROXY` | non | vide (aucun) | nombre de reverse proxys de confiance (ex. `1`) ou liste IP/CIDR ; `true` refusé. Requis pour que le rate-limit par IP voie l'IP réelle derrière un proxy |
+| `RETENTION_MONTHS` | non | `12` | purge automatique des inscriptions N mois après `activities.starts_at` (1..120) ; exécutée au démarrage puis chaque jour (`npm run data:purge` pour un lancement manuel) |
+| `RATE_LIMIT_REGISTRATION_PER_IP_MIN` / `RATE_LIMIT_REGISTRATION_PER_ACTIVITY_10MIN` / `RATE_LIMIT_TOKEN_PER_IP_MIN` / `RATE_LIMIT_VIEW_PER_IP_MIN` | non | `20` / `10` / `30` / `60` | limites anti-abus de `/api/public/*` (POST inscription par IP/min ; par IP+activité/10 min ; GET/DELETE token par IP/min ; fiche publique par IP/min) |
 | `DATABASE_URL` | oui | — | `postgres://user:pass@host:5432/db` |
 | `SESSION_SECRET` | oui | — | ≥ 32 car., ≥ 10 caractères distincts (démarrage refusé sinon) |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` | oui (1er démarrage) | — | seed du compte initial ; mot de passe ≥ 12 car., valeurs triviales/d'exemple refusées (démarrage refusé) |

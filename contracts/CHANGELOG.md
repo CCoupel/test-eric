@@ -2,6 +2,16 @@
 
 > Changements de contrats (API, schemas) : `BREAKING` | `CHANGED` | `ADDED`. Lu par le CDP au GATE 2.
 
+## [20261021c] — Inscription publique (issue #6, exigences security + décisions utilisateur)
+
+- **[ADDED]** `POST /api/public/activities/:slug/registrations` — champ optionnel `website` (honeypot) ; limites 20/min/IP et 10/10 min/IP+activité
+- **[ADDED]** rate-limit `GET|DELETE /api/public/registrations/:token` (30/min/IP) et `GET /api/public/activities/:slug` (60/min/IP)
+- **[ADDED]** variables `RETENTION_MONTHS` (défaut 12) et `RATE_LIMIT_*` ; script `npm run data:purge` ; purge automatique quotidienne
+- **[ADDED]** anonymisation de `mailing_recipients.error` (en plus de `email` / `registration_id`) à la désinscription et à la purge
+- **[ADDED]** journalisation `registrations_viewed` sur `GET /api/activities/:id/registrations` (sans donnée personnelle)
+- **[ADDED]** migration `006_mailings` (tables `mailings`, `mailing_activities`, `mailing_recipients`) créée dès #6 pour l'anonymisation ; services d'envoi en #7
+- **[CHANGED]** `409 already_registered` conservé (décision utilisateur) sous réserve du rate-limit renforcé
+
 ## [20261021b] — Durcissement auth (issue #5, audit security)
 
 - **[ADDED]** `users.token_version` — révocation de session (claim JWT `tv`, incrémenté au logout)
