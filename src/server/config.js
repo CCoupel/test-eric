@@ -36,6 +36,19 @@ export function loadConfig(env = process.env) {
   if (!databaseUrl) problems.push('DATABASE_URL est obligatoire');
   else if (!/^postgres(ql)?:\/\//.test(databaseUrl)) problems.push('DATABASE_URL doit commencer par postgres://');
 
+  // Session : secret ≥ 32 car. obligatoire (valeur fixe tolérée uniquement quand NODE_ENV=test).
+  let sessionSecret = str('SESSION_SECRET');
+  if (!sessionSecret && nodeEnv === 'test') sessionSecret = 'test-only-secret-test-only-secret-0123456789';
+  if (!sessionSecret) problems.push('SESSION_SECRET est obligatoire');
+  else if (sessionSecret.length < 32) problems.push('SESSION_SECRET doit faire au moins 32 caractères');
+
+  // Compte initial (seed idempotent) : tout ou rien.
+  const admin = { email: str('ADMIN_EMAIL'), password: str('ADMIN_PASSWORD'), name: str('ADMIN_NAME', 'Administrateur') };
+  const adminSet = [env.ADMIN_EMAIL, env.ADMIN_PASSWORD].filter((v) => !blank(v)).length;
+  if (adminSet === 1) problems.push('ADMIN_EMAIL et ADMIN_PASSWORD doivent être fournis ensemble');
+  if (admin.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(admin.email)) problems.push('ADMIN_EMAIL invalide');
+  if (admin.password && admin.password.length < 12) problems.push('ADMIN_PASSWORD doit faire au moins 12 caractères');
+
   if (problems.length) throw new ConfigError(problems);
 
   return {
@@ -46,6 +59,8 @@ export function loadConfig(env = process.env) {
     // HTTPS déduit de APP_BASE_URL : conditionne HSTS et upgrade-insecure-requests (QUALIF en http://localhost).
     https: new URL(baseUrl).protocol === 'https:',
     databaseUrl,
+    sessionSecret,
+    admin: admin.email ? admin : null,
     consentTextVersion: str('CONSENT_TEXT_VERSION', '2026-10'),
   };
 }

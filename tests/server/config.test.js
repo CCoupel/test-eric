@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { ConfigError, loadConfig } from '../../src/server/config.js';
 
-const base = { DATABASE_URL: 'postgres://u:p@localhost:5432/db' };
+const SECRET = 's'.repeat(32);
+const base = { DATABASE_URL: 'postgres://u:p@localhost:5432/db', SESSION_SECRET: SECRET };
 
 describe('loadConfig', () => {
   it('applique les défauts de développement', () => {
@@ -29,6 +30,24 @@ describe('loadConfig', () => {
   });
   it('exige APP_BASE_URL en production et un schéma postgres://', () => {
     expect(() => loadConfig({ ...base, NODE_ENV: 'production' })).toThrow(/APP_BASE_URL/);
-    expect(() => loadConfig({ DATABASE_URL: 'mysql://x' })).toThrow(/postgres/);
+    expect(() => loadConfig({ DATABASE_URL: 'mysql://x', SESSION_SECRET: SECRET })).toThrow(/postgres/);
+  });
+  it('SESSION_SECRET : obligatoire hors test, ≥ 32 caractères, défaut fixe en test', () => {
+    const noSecret = { DATABASE_URL: base.DATABASE_URL };
+    expect(() => loadConfig(noSecret)).toThrow(/SESSION_SECRET est obligatoire/);
+    expect(() => loadConfig({ ...base, SESSION_SECRET: 'court' })).toThrow(/32 caractères/);
+    expect(loadConfig({ ...noSecret, NODE_ENV: 'test' }).sessionSecret.length).toBeGreaterThanOrEqual(32);
+    expect(loadConfig(base).sessionSecret).toBe(SECRET);
+  });
+  it('compte admin initial : tout ou rien, e-mail valide, mot de passe ≥ 12', () => {
+    expect(loadConfig(base).admin).toBeNull();
+    expect(() => loadConfig({ ...base, ADMIN_EMAIL: 'a@b.fr' })).toThrow(/ensemble/);
+    expect(() => loadConfig({ ...base, ADMIN_EMAIL: 'pasunemail', ADMIN_PASSWORD: 'x'.repeat(12) })).toThrow(/ADMIN_EMAIL invalide/);
+    expect(() => loadConfig({ ...base, ADMIN_EMAIL: 'a@b.fr', ADMIN_PASSWORD: 'court' })).toThrow(/12 caractères/);
+    expect(loadConfig({ ...base, ADMIN_EMAIL: 'a@b.fr', ADMIN_PASSWORD: 'x'.repeat(12) }).admin).toEqual({
+      email: 'a@b.fr',
+      password: 'x'.repeat(12),
+      name: 'Administrateur',
+    });
   });
 });
