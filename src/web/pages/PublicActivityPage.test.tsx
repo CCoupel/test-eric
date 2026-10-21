@@ -125,6 +125,26 @@ describe('PublicActivityPage', () => {
     expect(screen.queryByTestId('register-submit')).toBeNull();
   });
 
+  it('activité commencée (starts_at passé) : affichée fermée, sans formulaire', async () => {
+    mockFetch([{ path: '/api/public/activities/abc', body: { ...PUBLIC, activity: { ...PUBLIC.activity, starts_at: '2020-01-01T10:00:00.000Z' } } }]);
+    renderPublic();
+    expect(await screen.findByTestId('public-activity-closed')).toBeInTheDocument();
+    expect(screen.queryByTestId('register-submit')).toBeNull();
+  });
+
+  it('409 activity_closed au submit : bascule en état fermé', async () => {
+    mockFetch([
+      { path: '/api/public/activities/abc', body: PUBLIC },
+      { method: 'POST', path: '/api/public/activities/abc/registrations', status: 409, body: { error: 'conflict', message: 'activity_closed : inscriptions fermées' } },
+    ]);
+    renderPublic();
+    await fill(true);
+    await userEvent.click(screen.getByTestId('register-consent'));
+    await userEvent.click(screen.getByTestId('register-submit'));
+    expect(await screen.findByTestId('public-activity-closed')).toHaveTextContent('Les inscriptions sont fermées.');
+    expect(screen.queryByTestId('register-submit')).toBeNull();
+  });
+
   it('slug inconnu : activité introuvable', async () => {
     mockFetch([{ path: '/api/public/activities/abc', status: 404, body: { error: 'not_found', message: 'x' } }]);
     renderPublic();

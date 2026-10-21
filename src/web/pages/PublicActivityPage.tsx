@@ -5,7 +5,7 @@ import { ApiError } from '../api/client';
 import { PublicLayout } from '../components/PublicLayout';
 import { formatDateTime, formatLongDateTime } from '../components/format';
 
-type Loaded = { activity: PublicActivity; consentText: string };
+type Loaded = { activity: PublicActivity; consentText: string; started: boolean };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -42,7 +42,7 @@ export function PublicActivityPage() {
     let active = true;
     publicApi
       .activity(slug)
-      .then((r) => active && setData({ activity: r.activity, consentText: r.consent_text }))
+      .then((r) => active && setData({ activity: r.activity, consentText: r.consent_text, started: new Date(r.activity.starts_at).getTime() <= Date.now() }))
       .catch((err: unknown) => {
         if (!active) return;
         if (err instanceof ApiError && err.status === 404) setNotFound(true);
@@ -76,7 +76,7 @@ export function PublicActivityPage() {
     );
 
   const { activity } = data;
-  const closed = activity.status === 'closed';
+  const closed = activity.status === 'closed' || data.started;
   const full = !closed && activity.is_full;
 
   return (
@@ -105,6 +105,7 @@ export function PublicActivityPage() {
                 slug={slug}
                 consentText={data.consentText}
                 onDone={(manageUrl, participant) => setDone({ manageUrl, participant })}
+                onClosed={() => setData((d) => (d ? { ...d, activity: { ...d.activity, status: 'closed' } } : d))}
               />
             )}
           </>
@@ -140,7 +141,17 @@ function Confirmation({ activity, manageUrl, participant }: { activity: PublicAc
   );
 }
 
-function RegistrationForm({ slug, consentText, onDone }: { slug: string; consentText: string; onDone: (manageUrl: string, participant: string) => void }) {
+function RegistrationForm({
+  slug,
+  consentText,
+  onDone,
+  onClosed,
+}: {
+  slug: string;
+  consentText: string;
+  onDone: (manageUrl: string, participant: string) => void;
+  onClosed: () => void;
+}) {
   const [minor, setMinor] = useState(true);
   const [participant, setParticipant] = useState('');
   const [contact, setContact] = useState('');
@@ -175,7 +186,8 @@ function RegistrationForm({ slug, consentText, onDone }: { slug: string; consent
       const r = await publicApi.register(slug, input);
       onDone(r.manage_url, r.registration.participant_name);
     } catch (err) {
-      setFormError(errorMessage(err));
+      if (err instanceof ApiError && err.subCode === 'activity_closed') onClosed();
+      else setFormError(errorMessage(err));
     } finally {
       setBusy(false);
     }
