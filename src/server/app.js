@@ -32,7 +32,9 @@ export const REDACT_PATHS = [
 export function maskUrl(url = '') {
   return String(url)
     .replace(/^(\/api\/public\/registrations\/)[^/?#]*/i, '$1[redacted]') // Express route sans tenir compte de la casse
-    .replace(/^(\/r\/)[^/?#]*/i, '$1[redacted]');
+    .replace(/^(\/r\/)[^/?#]*/i, '$1[redacted]')
+    // Filet de sécurité : toute séquence de la forme d'un token (43 car. base64url) est masquée, même sous un chemin inattendu (`//r/…`, `%72`…).
+    .replace(/(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{43}(?![A-Za-z0-9_-])/g, '[redacted]');
 }
 const serializers = { req: pino.stdSerializers.wrapRequestSerializer((r) => ({ ...r, url: maskUrl(r.url) })) };
 

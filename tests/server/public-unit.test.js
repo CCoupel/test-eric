@@ -16,6 +16,10 @@ describe('maskUrl', () => {
     expect(maskUrl('/api/public/registrations/abc?x=1')).toBe('/api/public/registrations/[redacted]?x=1');
     expect(maskUrl('/r/abcDEF')).toBe('/r/[redacted]');
     expect(maskUrl('/api/activities/42')).toBe('/api/activities/42');
+    const tok = 'A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8S9t0U1v'; // 43 car.
+    expect(tok).toHaveLength(43);
+    expect(maskUrl(`//r/${tok}`)).toBe('//r/[redacted]');
+    expect(maskUrl(`/x/%72/${tok}?a=1`)).toBe('/x/%72/[redacted]?a=1');
     expect(maskUrl(undefined)).toBe('');
   });
 });
@@ -95,13 +99,15 @@ describe('maskUrl — casse', () => {
 describe('GET /api/public/info et CONTACT_EMAIL', () => {
   const info = async (extra) => request(createApp({ config: cfg(extra), pool: { query: async () => ({}) } })).get('/api/public/info');
 
-  it('CONTACT_EMAIL prioritaire, sinon ADMIN_EMAIL, sinon null ; no-store ; aucune autre donnée', async () => {
+  it('contact_email = CONTACT_EMAIL ou null, jamais ADMIN_EMAIL ; retention_months exposé ; no-store', async () => {
     const admin = { ADMIN_EMAIL: 'admin@club.fr', ADMIN_PASSWORD: 'Zx9-sel-unique-12+' };
-    let res = await info({ ...admin, CONTACT_EMAIL: 'rgpd@club.fr' });
+    let res = await info({ ...admin, CONTACT_EMAIL: 'rgpd@club.fr', RETENTION_MONTHS: '6' });
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ contact_email: 'rgpd@club.fr', consent_version: '2026-10' });
+    expect(res.body).toEqual({ contact_email: 'rgpd@club.fr', consent_version: '2026-10-r6', retention_months: 6 });
     expect(res.headers['cache-control']).toBe('no-store');
-    expect((await info(admin)).body.contact_email).toBe('admin@club.fr');
+    res = await info(admin);
+    expect(res.body).toEqual({ contact_email: null, consent_version: '2026-10', retention_months: 12 });
+    expect(JSON.stringify(res.body)).not.toContain('admin@club.fr');
     expect((await info()).body.contact_email).toBeNull();
   });
   it('CONTACT_EMAIL invalide refusé au démarrage', () => {

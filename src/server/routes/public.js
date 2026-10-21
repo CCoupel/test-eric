@@ -29,7 +29,7 @@ export function publicRoutes({ config, pool }) {
   // Informations légales publiques (page de confidentialité) : lecture seule, aucune donnée personnelle d'inscrit.
   router.get('/info', view, (_req, res) => {
     res.set('Cache-Control', 'no-store');
-    res.json({ contact_email: config.contactEmail, consent_version: config.consentTextVersion });
+    res.json({ contact_email: config.contactEmail, consent_version: config.consentTextVersion, retention_months: config.retentionMonths });
   });
 
   router.get('/activities/:slug', view, async (req, res) => {

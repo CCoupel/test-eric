@@ -93,9 +93,16 @@ export async function createRegistration(pool, config, slug, input, log) {
   const token = newToken();
   const contactName = input.is_minor ? input.contact_name : input.participant_name;
   const row = await withTx(pool, async (db) => {
-    const act = (await db.query("SELECT id, status, capacity FROM activities WHERE public_slug = $1 AND status <> 'draft' FOR UPDATE", [slug])).rows[0];
+    const act = (
+      await db.query(
+        `SELECT id, status, capacity, starts_at < now() - make_interval(months => $2) AS beyond_retention
+         FROM activities WHERE public_slug = $1 AND status <> 'draft' FOR UPDATE`,
+        [slug, config.retentionMonths],
+      )
+    ).rows[0];
     if (!act) throw notFound('Activité');
-    if (act.status !== 'open') throw conflict('activity_closed', 'Les inscriptions sont fermées');
+    // Une inscription créée au-delà de la durée de conservation serait purgée dès le lendemain : refusée.
+    if (act.status !== 'open' || act.beyond_retention) throw conflict('activity_closed', 'Les inscriptions sont fermées');
     const dup = await db.query(
       'SELECT 1 FROM registrations WHERE activity_id = $1 AND contact_email = $2 AND lower(participant_name) = lower($3)',
       [act.id, input.contact_email, input.participant_name],
@@ -163,12 +170,9 @@ export async function getByToken(pool, config, token) {
 /**
  * Anonymise l'historique d'envois lié à des inscriptions (à appeler DANS la transaction de suppression, AVANT le DELETE :
  * la FK `ON DELETE SET NULL` effacerait sinon le lien). Efface aussi `error` (les erreurs SMTP contiennent l'adresse).
- * La table `mailing_recipients` arrive avec le LOT-4 : absente → rien à faire.
  */
 export async function anonymizeRecipients(db, registrationIds) {
   if (!registrationIds.length) return 0;
-  const exists = await db.query("SELECT to_regclass('mailing_recipients') AS t");
-  if (!exists.rows[0].t) return 0;
   const r = await db.query('UPDATE mailing_recipients SET email = NULL, error = NULL, registration_id = NULL WHERE registration_id = ANY($1)', [registrationIds]);
   return r.rowCount;
 }
@@ -204,17 +208,25 @@ export async function removeRegistrationAsManager(pool, activityId, registration
   });
 }
 
-/** Purge RGPD : inscriptions des activités terminées depuis plus de `retentionMonths` mois. Idempotent. */
+const PURGE_BATCH = 500;
+
+/** Purge RGPD : inscriptions des activités terminées depuis plus de `retentionMonths` mois. Idempotent, par lots de 500 (une transaction par lot). */
 export async function purgeExpired(pool, { retentionMonths }) {
-  return withTx(pool, async (db) => {
-    const { rows } = await db.query(
-      `SELECT r.id FROM registrations r JOIN activities a ON a.id = r.activity_id
-       WHERE a.starts_at < now() - make_interval(months => $1) FOR UPDATE OF r`,
-      [retentionMonths],
-    );
-    const ids = rows.map((r) => r.id);
-    const anonymized = await anonymizeRecipients(db, ids);
-    if (ids.length) await db.query('DELETE FROM registrations WHERE id = ANY($1)', [ids]);
-    return { registrationsDeleted: ids.length, recipientsAnonymized: anonymized };
-  });
+  const total = { registrationsDeleted: 0, recipientsAnonymized: 0 };
+  for (;;) {
+    const batch = await withTx(pool, async (db) => {
+      const { rows } = await db.query(
+        `SELECT r.id FROM registrations r JOIN activities a ON a.id = r.activity_id
+         WHERE a.starts_at < now() - make_interval(months => $1) ORDER BY r.id LIMIT $2 FOR UPDATE OF r`,
+        [retentionMonths, PURGE_BATCH],
+      );
+      const ids = rows.map((r) => r.id);
+      const anonymized = await anonymizeRecipients(db, ids);
+      if (ids.length) await db.query('DELETE FROM registrations WHERE id = ANY($1)', [ids]);
+      return { count: ids.length, anonymized };
+    });
+    total.registrationsDeleted += batch.count;
+    total.recipientsAnonymized += batch.anonymized;
+    if (batch.count < PURGE_BATCH) return total;
+  }
 }

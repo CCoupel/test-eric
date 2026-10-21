@@ -107,7 +107,7 @@ Journalisé (`registration_removed_by_manager` : userId, activityId, registratio
 
 ### GET /api/public/info
 **Auth** : Public — informations légales pour la page de confidentialité (lecture seule, `Cache-Control: no-store`, 60/min/IP).
-**Response 200** : `{ "contact_email": "string|null", "consent_version": "2026-10" }` (`contact_email` = `CONTACT_EMAIL`, sinon `ADMIN_EMAIL`, sinon `null`).
+**Response 200** : `{ "contact_email": "string|null", "consent_version": "2026-10", "retention_months": 12 }` (`contact_email` = `CONTACT_EMAIL` ou `null` — **jamais** `ADMIN_EMAIL` ; `retention_months` = `RETENTION_MONTHS`).
 
 ### GET /api/public/activities/:slug
 **Auth** : Public — fiche publique (sans données des inscrits).
@@ -137,7 +137,7 @@ Journalisé (`registration_removed_by_manager` : userId, activityId, registratio
   "manage_url": "https://…/r/<token>" }
 ```
 `manage_url` n'est renvoyé **qu'ici** (token non récupérable ensuite, sauf e-mail de confirmation si SMTP, lot #7).
-**Errors** : 400 (champs, e-mail, `consent ≠ true`), 404 (slug inconnu / draft), `409 activity_closed`,
+**Errors** : 400 (champs, e-mail, `consent ≠ true`), 404 (slug inconnu / draft), `409 activity_closed` (aussi si l'activité est antérieure à la durée de conservation),
 `409 activity_full`, `409 already_registered`, 429
 
 ### GET /api/public/registrations/:token

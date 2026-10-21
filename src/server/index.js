@@ -10,6 +10,10 @@ const SHUTDOWN_TIMEOUT_MS = 10_000;
 
 /** Applique les migrations puis écoute ; retourne `{ server, pool, stop }` (stop = arrêt propre). */
 export async function start(config = loadConfig(), log = console) {
+  if (config.isProduction && config.https && !config.trustProxy) {
+    // Derrière un reverse proxy TLS, sans TRUST_PROXY toutes les IP seraient celles du proxy : rate-limit mutualisé entre tous les visiteurs.
+    log.warn?.('TRUST_PROXY non défini en production HTTPS : si un reverse proxy est devant, l’IP vue par les limiteurs sera celle du proxy (voir contracts/models.md).');
+  }
   const pool = createPool(config, log);
   let server;
   let purge;

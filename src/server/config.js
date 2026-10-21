@@ -57,9 +57,11 @@ export function loadConfig(env = process.env) {
     problems.push('ADMIN_PASSWORD est une valeur triviale ou d\'exemple');
   }
 
-  // Contact RGPD affiché sur la page de confidentialité : CONTACT_EMAIL, sinon ADMIN_EMAIL, sinon absent.
-  const contactEmail = (str('CONTACT_EMAIL') ?? admin.email) || null;
+  // Contact RGPD affiché sur la page de confidentialité : CONTACT_EMAIL uniquement (jamais de repli sur ADMIN_EMAIL, qui est un identifiant de connexion).
+  const contactEmail = str('CONTACT_EMAIL') || null;
   if (contactEmail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contactEmail)) problems.push('CONTACT_EMAIL invalide');
+
+  const consentBase = str('CONSENT_TEXT_VERSION', '2026-10');
 
   // Conservation RGPD : purge des inscriptions N mois après la date de l'activité (défaut 12).
   const retentionRaw = str('RETENTION_MONTHS', '12');
@@ -106,6 +108,7 @@ export function loadConfig(env = process.env) {
     publicLimits,
     authLimits,
     admin: admin.email ? admin : null,
-    consentTextVersion: str('CONSENT_TEXT_VERSION', '2026-10'),
+    // La version identifie le texte accepté, qui interpole la durée de conservation : hors défaut (12 mois), suffixe `-r<N>`.
+    consentTextVersion: retentionMonths === 12 ? consentBase : `${consentBase}-r${retentionMonths}`,
   };
 }

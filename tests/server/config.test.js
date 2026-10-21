@@ -62,4 +62,9 @@ describe('loadConfig', () => {
     expect(loadConfig({ ...base, TRUST_PROXY: 'loopback, 10.0.0.0/8' }).trustProxy).toBe('loopback, 10.0.0.0/8');
     expect(() => loadConfig({ ...base, TRUST_PROXY: 'true' })).toThrow(/TRUST_PROXY/);
   });
+  it('consentTextVersion : base par défaut, suffixe -r<N> si la rétention n’est pas 12 mois', () => {
+    expect(loadConfig(base).consentTextVersion).toBe('2026-10');
+    expect(loadConfig({ ...base, RETENTION_MONTHS: '12' }).consentTextVersion).toBe('2026-10');
+    expect(loadConfig({ ...base, RETENTION_MONTHS: '24', CONSENT_TEXT_VERSION: '2027-01' }).consentTextVersion).toBe('2027-01-r24');
+  });
 });

@@ -127,7 +127,7 @@ Champs calculés (jamais stockés) : `registrations_count` (inscriptions actives
 | `APP_PORT` | non | `3000` | port HTTP |
 | `APP_BASE_URL` | oui | `http://localhost:3000` | construction des liens publics ; **origine du navigateur** : seule `Origin` autorisée sur les mutations, et `Secure` du cookie si `https://` (en dev avec Vite : `http://localhost:5173`) |
 | `TRUST_PROXY` | non | vide (aucun) | nombre de reverse proxys de confiance (ex. `1`) ou liste IP/CIDR ; `true` refusé. Requis pour que le rate-limit par IP voie l'IP réelle derrière un proxy |
-| `CONTACT_EMAIL` | non | `ADMIN_EMAIL` | contact RGPD affiché sur la page de confidentialité (via `GET /api/public/info`) ; absent → `null` |
+| `CONTACT_EMAIL` | non | — | contact RGPD affiché sur la page de confidentialité (via `GET /api/public/info`) ; absent → `null`. **Jamais de repli sur `ADMIN_EMAIL`** (identifiant de connexion, ne doit pas être publié) |
 | `RETENTION_MONTHS` | non | `12` | purge automatique des inscriptions N mois après `activities.starts_at` (1..120) ; exécutée au démarrage puis chaque jour (`npm run data:purge` pour un lancement manuel) |
 | `RATE_LIMIT_LOGIN_PER_IP_MIN` | non | `10` | tentatives de `POST /api/auth/login` par IP et par minute (contrat : 10) ; ne relever qu'en test/E2E. Le limiteur par e-mail (5 échecs / 15 min) n'est pas configurable |
 | `RATE_LIMIT_REGISTRATION_PER_IP_MIN` / `RATE_LIMIT_REGISTRATION_PER_ACTIVITY_10MIN` / `RATE_LIMIT_TOKEN_PER_IP_MIN` / `RATE_LIMIT_VIEW_PER_IP_MIN` | non | `20` / `10` / `30` / `60` | limites anti-abus de `/api/public/*` (POST inscription par IP/min ; par IP+activité/10 min ; GET/DELETE token par IP/min ; fiche publique par IP/min) |
@@ -136,4 +136,4 @@ Champs calculés (jamais stockés) : `registrations_count` (inscriptions actives
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` | oui (1er démarrage) | — | seed du compte initial ; mot de passe ≥ 12 car., valeurs triviales/d'exemple refusées (démarrage refusé) |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` / `SMTP_USER` / `SMTP_PASS` | non | vide → stub | Nodemailer |
 | `MAIL_FROM` | si SMTP | — | `Club <no-reply@domaine>` |
-| `CONSENT_TEXT_VERSION` | non | `2026-10` | version du texte RGPD |
+| `CONSENT_TEXT_VERSION` | non | `2026-10` | version du texte RGPD ; la version effective porte le suffixe `-r<N>` si `RETENTION_MONTHS` ≠ 12 (le texte accepté mentionne la durée) |
