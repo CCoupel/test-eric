@@ -15,6 +15,9 @@ export async function makeApp(options = {}) {
   // Limite par IP+activité (anti-remplissage) relevée pour les tests qui inscrivent beaucoup depuis la même IP ;
   // le test dédié (creation/ratelimit-activite.test.js) la ramène à une valeur basse via options.env.
   process.env.RATE_LIMIT_REGISTRATION_PER_ACTIVITY_10MIN = '1000';
+  // Messagerie : environnement propre a chaque app (stub par defaut) — pas de fuite d'un fichier SMTP vers le suivant.
+  for (const k of ['SMTP_HOST', 'SMTP_PORT', 'SMTP_SECURE', 'SMTP_USER', 'SMTP_PASS', 'MAIL_FROM', 'CONTACT_EMAIL',
+    'RATE_LIMIT_MAILING_PER_USER_10MIN', 'MAILING_MAX_RECIPIENTS', 'MAILING_SYNC_MAX_RECIPIENTS']) delete process.env[k];
   Object.assign(process.env, options.env ?? {});
   const appOptions = { ...options };
   delete appOptions.env;

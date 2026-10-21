@@ -19,3 +19,11 @@
 | tests/integration/inscription/retention/ | integration | backend | Purge RGPD `data:purge` (RETENTION_MONTHS) | feature | |
 | e2e/inscription/parcours/ | e2e | frontend | Parcours parent : inscription, confirmation, desinscription | feature | critical |
 | e2e/inscription/retrait-responsable/ | e2e | frontend | Retrait d'un inscrit par le responsable (droit a l'effacement) | feature | critical |
+| tests/integration/mailing/envoi/ | integration | backend | Envoi groupe (stub), apercu, validation stricte, rate-limit, anti double-envoi | feature | |
+| tests/integration/mailing/smtp/ | integration | backend | SMTP de test : succes/partiel/echec, en-tetes, HTML echappe, config au demarrage | feature | slow |
+| tests/integration/mailing/robustesse/ | integration | backend | Un envoi a la fois, deconnexion client, recuperation des orphelins, plafonds | feature | slow |
+| tests/integration/mailing/historique/ | integration | backend | Historique, detail, anonymisation, journaux sans donnees personnelles | feature | |
+| tests/integration/mailing/confirmation/ | integration | backend | E-mail de confirmation d'inscription (non bloquant, jeton protege) | feature | slow |
+| tests/integration/mailing/desabonnement/ | integration | backend | Desabonnement en un clic RFC 8058 (jeton unique, 404 uniformes) | feature | slow |
+| tests/integration/mailing/retention/ | integration | backend | Purge des mailings anciens (RETENTION_MONTHS) | feature | |
+| e2e/mailing/composer/ | e2e | frontend | Composer : apercu, envoi stub, historique, page de desabonnement inconnue | feature | critical |
