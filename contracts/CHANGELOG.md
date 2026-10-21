@@ -12,7 +12,7 @@
 - **[ADDED]** migration `006_mailings` (tables `mailings`, `mailing_activities`, `mailing_recipients`) créée dès #6 pour l'anonymisation ; services d'envoi en #7
 - **[ADDED]** variable `RATE_LIMIT_LOGIN_PER_IP_MIN` (défaut 10, contrat inchangé) — surcharge réservée aux tests/E2E
 - **[ADDED]** `GET /api/public/info` — `{ contact_email, consent_version, retention_months }` ; variable `CONTACT_EMAIL` (sans repli sur `ADMIN_EMAIL`)
-- **[CHANGED]** `consent_version` suffixée `-r<N>` si `RETENTION_MONTHS` ≠ 12 ; `POST …/registrations` → `409 activity_closed` pour une activité antérieure à la durée de conservation
+- **[CHANGED]** `consent_version` suffixée `-r<N>` si `RETENTION_MONTHS` ≠ 12 ; `POST …/registrations` → `409 activity_closed` dès que `starts_at` est passé
 - **[ADDED]** `DELETE /api/activities/:id/registrations/:registrationId` — suppression + anonymisation par un responsable (audit security M1)
 - **[ADDED]** migration `007` — trigger `BEFORE DELETE` sur `registrations` : efface `email`/`error` des `mailing_recipients` liés (défense en profondeur)
 - **[CHANGED]** `409 already_registered` conservé (décision utilisateur) sous réserve du rate-limit renforcé

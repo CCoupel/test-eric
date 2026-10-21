@@ -82,7 +82,9 @@ export function loadConfig(env = process.env) {
     viewPerIpPerMin: intVar('RATE_LIMIT_VIEW_PER_IP_MIN', 60),
   };
 
-  const authLimits = { loginPerIpPerMin: intVar('RATE_LIMIT_LOGIN_PER_IP_MIN', 10) }; // login : 10/min/IP (contrat), relevé uniquement pour l'E2E
+  const authLimits = { loginPerIpPerMin: intVar('RATE_LIMIT_LOGIN_PER_IP_MIN', 10) };
+  // Garde-fou : en production, relever la limite de login au-delà de 50/min/IP affaiblirait le bruteforce-guard (surcharge réservée aux tests/E2E).
+  if (nodeEnv === 'production' && authLimits.loginPerIpPerMin > 50) problems.push('RATE_LIMIT_LOGIN_PER_IP_MIN ne doit pas dépasser 50 en production'); // login : 10/min/IP (contrat), relevé uniquement pour l'E2E
 
   // TRUST_PROXY : nombre de sauts de proxy de confiance (ex. 1), ou liste d'IP/CIDR/alias Express. `true` est refusé (IP usurpable).
   const trustRaw = str('TRUST_PROXY', 'false');

@@ -95,14 +95,15 @@ export async function createRegistration(pool, config, slug, input, log) {
   const row = await withTx(pool, async (db) => {
     const act = (
       await db.query(
-        `SELECT id, status, capacity, starts_at < now() - make_interval(months => $2) AS beyond_retention
+        `SELECT id, status, capacity, starts_at <= now() AS started
          FROM activities WHERE public_slug = $1 AND status <> 'draft' FOR UPDATE`,
-        [slug, config.retentionMonths],
+        [slug],
       )
     ).rows[0];
     if (!act) throw notFound('Activité');
-    // Une inscription créée au-delà de la durée de conservation serait purgée dès le lendemain : refusée.
-    if (act.status !== 'open' || act.beyond_retention) throw conflict('activity_closed', 'Les inscriptions sont fermées');
+    // Activité commencée ou passée : plus d'inscription (sous-code contractuel existant `activity_closed`). Évite aussi qu'une
+    // inscription tardive soit purgée aussitôt par la rétention.
+    if (act.status !== 'open' || act.started) throw conflict('activity_closed', 'Les inscriptions sont fermées');
     const dup = await db.query(
       'SELECT 1 FROM registrations WHERE activity_id = $1 AND contact_email = $2 AND lower(participant_name) = lower($3)',
       [act.id, input.contact_email, input.participant_name],

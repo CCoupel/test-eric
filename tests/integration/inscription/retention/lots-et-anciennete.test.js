@@ -28,9 +28,14 @@ describe.skipIf(!hasDb)('Retention - lots et anciennete', () => {
     expect((await purgeExpired(ctx.pool, { retentionMonths: 12 })).registrationsDeleted).toBe(0);
   });
 
-  it('inscription refusee (409 activity_closed) pour une activite anterieure a la duree de conservation', async () => {
-    const a = await newActivity(ctx, { capacity: 5, title: 'Trop ancienne' });
-    await ctx.pool.query("UPDATE activities SET starts_at = now() - interval '13 months' WHERE id = $1", [a.id]);
-    expectConflict(await register(ctx, a.public_slug), 'activity_closed');
+  it('inscription refusee (409 activity_closed) des que la date de l’activite est passee, meme recemment', async () => {
+    const a = await newActivity(ctx, { capacity: 5, title: 'Passee' });
+    for (const past of ["now() - interval '1 minute'", "now() - interval '13 months'"]) {
+      await ctx.pool.query(`UPDATE activities SET starts_at = ${past} WHERE id = $1`, [a.id]);
+      expectConflict(await register(ctx, a.public_slug), 'activity_closed');
+    }
+    expect((await ctx.pool.query('SELECT count(*)::int AS n FROM registrations WHERE activity_id = $1', [a.id])).rows[0].n).toBe(0);
+    await ctx.pool.query("UPDATE activities SET starts_at = now() + interval '1 day' WHERE id = $1", [a.id]);
+    expect((await register(ctx, a.public_slug)).status).toBe(201);
   });
 });

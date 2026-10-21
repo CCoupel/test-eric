@@ -67,4 +67,11 @@ describe('loadConfig', () => {
     expect(loadConfig({ ...base, RETENTION_MONTHS: '12' }).consentTextVersion).toBe('2026-10');
     expect(loadConfig({ ...base, RETENTION_MONTHS: '24', CONSENT_TEXT_VERSION: '2027-01' }).consentTextVersion).toBe('2027-01-r24');
   });
+  it('RATE_LIMIT_LOGIN_PER_IP_MIN > 50 refusé en production, toléré hors production', () => {
+    const prod = { ...base, NODE_ENV: 'production', APP_BASE_URL: 'https://club.example' };
+    expect(() => loadConfig({ ...prod, RATE_LIMIT_LOGIN_PER_IP_MIN: '51' })).toThrow(/50 en production/);
+    expect(loadConfig({ ...prod, RATE_LIMIT_LOGIN_PER_IP_MIN: '50' }).authLimits.loginPerIpPerMin).toBe(50);
+    expect(loadConfig({ ...base, RATE_LIMIT_LOGIN_PER_IP_MIN: '1000' }).authLimits.loginPerIpPerMin).toBe(1000);
+    expect(loadConfig({ ...base, NODE_ENV: 'test', RATE_LIMIT_LOGIN_PER_IP_MIN: '1000' }).authLimits.loginPerIpPerMin).toBe(1000);
+  });
 });
