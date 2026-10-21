@@ -17,6 +17,7 @@ export default defineConfig({
           include: ['tests/server/**/*.test.js', 'tests/integration/**/*.test.js'],
           globalSetup: ['tests/server/global-setup.js'],
           fileParallelism: false,
+          hookTimeout: 60_000,
           testTimeout: 30_000, // certains tests lancent `npm run data:purge` (démarrage npm lent sous Windows/WSL)
         },
       },

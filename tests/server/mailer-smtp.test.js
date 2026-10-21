@@ -23,8 +23,23 @@ describe('config SMTP', () => {
     expect(() => loadConfig({ ...base, SMTP_HOST: 'h', MAIL_FROM: 'a@b.fr', SMTP_SECURE: 'oui' })).toThrow(/SMTP_SECURE/);
     expect(() => loadConfig({ ...base, SMTP_HOST: 'h/evil', MAIL_FROM: 'a@b.fr' })).toThrow(/SMTP_HOST/);
   });
+  it('TLS imposé par défaut hors hôte local, SMTP_REQUIRE_TLS surchargeable ; CONTACT_EMAIL strict', () => {
+    const smtp = (over) => loadConfig({ ...base, MAIL_FROM: 'a@b.fr', ...over }).mail;
+    expect(smtp({ SMTP_HOST: 'smtp.relais.example' }).requireTls).toBe(true);
+    expect(smtp({ SMTP_HOST: '127.0.0.1' }).requireTls).toBe(false);
+    expect(smtp({ SMTP_HOST: 'localhost' }).requireTls).toBe(false);
+    expect(smtp({ SMTP_HOST: 'smtp.relais.example', SMTP_REQUIRE_TLS: 'false' }).requireTls).toBe(false);
+    expect(smtp({ SMTP_HOST: '127.0.0.1', SMTP_REQUIRE_TLS: 'true' }).requireTls).toBe(true);
+    expect(() => smtp({ SMTP_HOST: 'h', SMTP_REQUIRE_TLS: 'peut-etre' })).toThrow(/SMTP_REQUIRE_TLS/);
+    for (const bad of ['a>,<https://x/y@z.fr', 'a@b.fr, c@d.fr', 'Nom <a@b.fr>', 'a b@c.fr']) {
+      expect(() => loadConfig({ ...base, CONTACT_EMAIL: bad }), bad).toThrow(/CONTACT_EMAIL/);
+    }
+    expect(loadConfig({ ...base, CONTACT_EMAIL: 'rgpd@club.example' }).contactEmail).toBe('rgpd@club.example');
+  });
   it('limites d’envoi : défauts et validation', () => {
-    expect(loadConfig(base).mailLimits).toEqual({ perUserPer10Min: 5, maxRecipients: 500, syncMaxRecipients: 100 });
+    expect(loadConfig(base).mailLimits).toEqual({
+      perUserPer10Min: 5, maxRecipients: 500, syncMaxRecipients: 100, confirmationPerAddressPerHour: 3, confirmationGlobalPerHour: 300, unsubscribePerIpPerMin: 300,
+    });
     expect(() => loadConfig({ ...base, MAILING_MAX_RECIPIENTS: '0' })).toThrow(/MAILING_MAX_RECIPIENTS/);
   });
 });

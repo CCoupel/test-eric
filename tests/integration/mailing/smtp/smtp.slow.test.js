@@ -24,7 +24,7 @@ describe.skipIf(!hasDb)('Mailing - SMTP', () => {
   it('GET /api/mail/status : { transport: "smtp", from: MAIL_FROM } sans hote, port ni identifiants', async () => {
     const res = await ctx.api('get', '/api/mail/status');
     expect(res.body).toEqual({ transport: 'smtp', from: MAIL_FROM });
-    expect(JSON.stringify(res.body)).not.toMatch(/127\.0\.0\.1|smtp\.|port/i);
+    expect(JSON.stringify(res.body)).not.toMatch(/127\.0\.0\.1|smtp\.|"(host|port|user|pass)"/i);
   });
 
   it('un echec de destinataire : status partial, compteurs et statuts par destinataire', async () => {

@@ -7,6 +7,7 @@ import { hashToken } from './registrations.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const LOCK_KEY = 726_002; // verrou consultatif : un seul envoi groupé à la fois
+const BREAKER_THRESHOLD = 5;
 const DUPLICATE_WINDOW = "interval '5 minutes'";
 
 const activityIds = z
@@ -122,8 +123,21 @@ export function createMailingService({ pool, config, mailer }) {
   async function sendLoop({ mailingId, userId, recipients, subject, body, log }) {
     let sent = 0;
     let failed = 0;
+    let infraFailures = 0; // échecs consécutifs « infrastructure » (connexion/timeout/auth)
     try {
-      for (const r of recipients) {
+      for (const [index, r] of recipients.entries()) {
+        if (infraFailures >= BREAKER_THRESHOLD) {
+          // Disjoncteur : SMTP indisponible, on n'insiste pas (le verrou global ne doit pas être retenu pendant des heures). Restant = interrompu.
+          await pool.query(
+            `INSERT INTO mailing_recipients (mailing_id, registration_id, email, status, error)
+             SELECT $1, x.registration_id, x.email, 'failed', 'interrupted'
+             FROM unnest($2::uuid[], $3::text[]) AS x(registration_id, email)`,
+            [mailingId, recipients.slice(index).map((q) => q.registration_id), recipients.slice(index).map((q) => q.email)],
+          );
+          failed += recipients.length - index;
+          log?.warn?.({ event: 'mailing_circuit_open', mailingId, skipped: recipients.length - index }, 'envoi interrompu : SMTP en échec répété');
+          break;
+        }
         const token = randomBytes(32).toString('base64url');
         // Ligne écrite AVANT l'envoi (lien de désabonnement valide dès l'envoi ; « failed/interrupted » si le processus s'arrête en cours).
         const ins = await pool.query(
@@ -144,15 +158,17 @@ export function createMailingService({ pool, config, mailer }) {
         try {
           await mailer.send({ to: r.email, ...message });
           sent += 1;
+          infraFailures = 0;
         } catch (err) {
           status = 'failed';
           error = err.code ?? 'other';
           failed += 1;
+          infraFailures = ['connection', 'timeout', 'auth'].includes(error) ? infraFailures + 1 : 0;
         }
         await pool.query('UPDATE mailing_recipients SET status = $2, error = $3, sent_at = now() WHERE id = $1', [ins.rows[0].id, status, error]);
       }
     } catch (err) {
-      log?.error?.({ event: 'mailing_loop_error', mailingId, code: err.code, message: String(err.message).slice(0, 200) }, 'envoi interrompu');
+      log?.error?.({ event: 'mailing_loop_error', mailingId, code: err.code }, 'envoi interrompu');
       failed = recipients.length - sent;
     } finally {
       const status = failed === 0 ? 'sent' : sent === 0 ? 'failed' : 'partial';

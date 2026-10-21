@@ -8,6 +8,7 @@
 - **[ADDED]** `GET /api/public/unsubscribe/:token`, `POST /api/public/unsubscribe/:token` — désabonnement en un clic (RFC 8058) ; route frontend `/u/:token`
 - **[ADDED]** en-têtes `List-Unsubscribe` / `List-Unsubscribe-Post` ; pied de page ; e-mail de confirmation d'inscription (porte le lien de gestion)
 - **[ADDED]** colonnes `mailing_recipients.unsubscribe_token_hash`, `mailings.fingerprint` (migration 008) ; variables `SMTP_*`, `MAIL_FROM`, `MAILING_*`, `RATE_LIMIT_MAILING_PER_USER_10MIN`
+- **[ADDED]** plafond des e-mails de confirmation par adresse (3/h) et global ; disjoncteur d'envoi groupé (5 échecs consécutifs de connexion/timeout/auth → reste `failed/interrupted`) ; `SMTP_REQUIRE_TLS` ; limite dédiée du désabonnement (300/min/IP)
 - **[CHANGED]** purge RGPD : inclut l'historique d'envois (`mailings`) au-delà de `RETENTION_MONTHS`
 
 ## [20261021d] — Honeypot renommé (bug QUALIF 0.1.0.4)

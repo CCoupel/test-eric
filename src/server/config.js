@@ -1,3 +1,4 @@
+import { isSingleAddress } from './address.js';
 // Lecture et validation de l'environnement (contrat : contracts/models.md « Variables d'environnement »).
 const NODE_ENVS = ['development', 'test', 'production'];
 
@@ -59,7 +60,7 @@ export function loadConfig(env = process.env) {
 
   // Contact RGPD affiché sur la page de confidentialité : CONTACT_EMAIL uniquement (jamais de repli sur ADMIN_EMAIL, qui est un identifiant de connexion).
   const contactEmail = str('CONTACT_EMAIL') || null;
-  if (contactEmail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contactEmail)) problems.push('CONTACT_EMAIL invalide');
+  if (contactEmail && !isSingleAddress(contactEmail)) problems.push('CONTACT_EMAIL invalide (adresse simple attendue)');
 
   const consentBase = str('CONSENT_TEXT_VERSION', '2026-10');
 
@@ -101,13 +102,21 @@ export function loadConfig(env = process.env) {
     problems.push('MAIL_FROM doit être une adresse unique (« a@b.fr » ou « Nom <a@b.fr> »), sans retour à la ligne');
   }
   if (smtpHost && /[\s/]/.test(smtpHost)) problems.push('SMTP_HOST invalide');
+  // TLS imposé par défaut sauf pour un hôte local (relais de développement) ; SMTP_REQUIRE_TLS=false pour forcer le clair sur un hôte distant (déconseillé).
+  const requireTlsRaw = str('SMTP_REQUIRE_TLS');
+  if (requireTlsRaw !== undefined && !['true', 'false'].includes(requireTlsRaw)) problems.push('SMTP_REQUIRE_TLS doit valoir true ou false');
+  const localSmtp = smtpHost ? /^(localhost|127\.\d+\.\d+\.\d+|\[?::1\]?)$/i.test(smtpHost) : false;
+  const requireTls = requireTlsRaw === undefined ? !localSmtp : requireTlsRaw === 'true';
   const mail = smtpHost && mailFrom
-    ? { transport: 'smtp', host: smtpHost, port: smtpPort, secure: smtpSecureRaw === 'true', user: smtpUser ?? null, pass: smtpPass ?? null, from: mailFrom }
+    ? { transport: 'smtp', host: smtpHost, port: smtpPort, secure: smtpSecureRaw === 'true', requireTls, user: smtpUser ?? null, pass: smtpPass ?? null, from: mailFrom }
     : { transport: 'stub', from: mailFrom ?? null };
   const mailLimits = {
     perUserPer10Min: intVar('RATE_LIMIT_MAILING_PER_USER_10MIN', 5),
     maxRecipients: intVar('MAILING_MAX_RECIPIENTS', 500, 5000),
     syncMaxRecipients: intVar('MAILING_SYNC_MAX_RECIPIENTS', 100, 5000),
+    confirmationPerAddressPerHour: intVar('RATE_LIMIT_CONFIRMATION_PER_ADDRESS_HOUR', 3),
+    confirmationGlobalPerHour: intVar('RATE_LIMIT_CONFIRMATION_GLOBAL_HOUR', 300),
+    unsubscribePerIpPerMin: intVar('RATE_LIMIT_UNSUBSCRIBE_PER_IP_MIN', 300),
   };
 
   // TRUST_PROXY : nombre de sauts de proxy de confiance (ex. 1), ou liste d'IP/CIDR/alias Express. `true` est refusé (IP usurpable).

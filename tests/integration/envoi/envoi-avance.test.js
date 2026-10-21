@@ -176,3 +176,60 @@ describe.skipIf(!hasDb)('Purge de l’historique d’envois (RETENTION_MONTHS)',
     expect((await purgeExpired(ctx.pool, { retentionMonths: 12 })).mailingsDeleted).toBe(0);
   });
 });
+
+describe.skipIf(!hasDb)('E-mail de confirmation — plafond par adresse', () => {
+  let ctx;
+  let mailer;
+  let logs;
+  let act;
+  beforeAll(async () => {
+    mailer = fakeMailer();
+    logs = captureLogs();
+    ctx = await setup({ mailer, logger: logs.logger, env: { RATE_LIMIT_REGISTRATION_PER_IP_MIN: '1000', RATE_LIMIT_CONFIRMATION_PER_ADDRESS_HOUR: '2' } });
+    act = await newActivity(ctx, { capacity: null });
+  });
+  afterAll(() => closeApp(ctx));
+
+  it('au-dela de 2 confirmations par adresse : inscription acceptee (201) mais aucun e-mail, journal sans adresse ; autre adresse non affectee', async () => {
+    for (let i = 1; i <= 4; i++) {
+      expect((await register(ctx, act.public_slug, { participant_name: `Enfant ${i}`, contact_email: 'victime@mail.fr' })).status).toBe(201);
+    }
+    expect((await register(ctx, act.public_slug, { participant_name: 'Autre', contact_email: 'autre@mail.fr' })).status).toBe(201);
+    await new Promise((r) => setTimeout(r, 100));
+    const toVictime = mailer.confirmations().filter((m) => m.to === 'victime@mail.fr');
+    expect(toVictime).toHaveLength(2);
+    expect(mailer.confirmations().filter((m) => m.to === 'autre@mail.fr')).toHaveLength(1);
+    expect((await ctx.pool.query("SELECT count(*)::int AS n FROM registrations WHERE contact_email = 'victime@mail.fr'")).rows[0].n).toBe(4);
+    expect(logs.text()).toContain('confirmation_mail_skipped');
+    expect(logs.text()).not.toContain('victime@mail.fr');
+  });
+});
+
+describe.skipIf(!hasDb)('Envoi groupe — disjoncteur SMTP', () => {
+  let ctx;
+  let mailer;
+  beforeAll(async () => {
+    mailer = fakeMailer();
+    ctx = await setup({ mailer, env: { RATE_LIMIT_REGISTRATION_PER_IP_MIN: '1000' } });
+  });
+  afterAll(() => closeApp(ctx));
+
+  it('apres 5 echecs consecutifs de connexion, le reste est interrompu (failed/interrupted) sans insister', async () => {
+    const act = await newActivity(ctx, { capacity: null });
+    await registerMany(ctx, act, 8);
+    let calls = 0;
+    mailer.send = async (m) => {
+      if (!m.headers?.['List-Unsubscribe']) return; // confirmations d'inscription : ignorees
+      calls += 1;
+      throw Object.assign(new Error('mail_failed'), { code: 'connection' });
+    };
+    const res = await ctx.api('post', '/api/mailings').send(mailingBody([act.id], { subject: 'SMTP KO' }));
+    expect(res.status).toBe(201);
+    expect(res.body.mailing).toMatchObject({ status: 'failed', sent_count: 0, failed_count: 8 });
+    expect(calls).toBe(5);
+    const detail = await ctx.api('get', `/api/mailings/${res.body.mailing.id}`);
+    expect(detail.body.recipients).toHaveLength(8);
+    expect(detail.body.recipients.filter((r) => r.error === 'interrupted')).toHaveLength(3);
+    expect(detail.body.recipients.filter((r) => r.error === 'connection')).toHaveLength(5);
+  });
+});

@@ -1,6 +1,8 @@
+import { createHash } from 'node:crypto';
 import { Router } from 'express';
 import { ipKeyGenerator, rateLimit } from 'express-rate-limit';
 import { HttpError, parse } from '../errors.js';
+import { FailureLimiter } from '../middleware/failure-limiter.js';
 import { confirmationMessage } from '../mailer/render.js';
 import * as svc from '../services/registrations.js';
 import { describeUnsubscribe, unsubscribe } from '../services/unsubscribe.js';
@@ -22,6 +24,12 @@ export function publicRoutes({ config, pool, mailer }) {
 
   const view = limiter(60_000, lim.viewPerIpPerMin, tooMany(msg));
   const token = limiter(60_000, lim.tokenPerIpPerMin, tooMany(msg));
+  // Un client e-mail (RFC 8058) poste depuis des IP partagées de fournisseurs : limite dédiée, plus haute que celle des tokens de gestion.
+  const unsub = limiter(60_000, config.mailLimits.unsubscribePerIpPerMin, tooMany(msg));
+  // E-mail de confirmation : plafond PAR ADRESSE destinataire (et global) pour que le formulaire public ne serve pas à harceler un tiers.
+  const mlim = config.mailLimits;
+  const confirmPerAddress = new FailureLimiter({ limit: mlim.confirmationPerAddressPerHour, windowMs: 3_600_000 });
+  const confirmGlobal = new FailureLimiter({ limit: mlim.confirmationGlobalPerHour, windowMs: 3_600_000 });
   const registerIp = limiter(60_000, lim.registrationPerIpPerMin, tooMany(msg));
   // Anti-remplissage : limite plus stricte par IP + activité (slug), en plus de la limite par IP.
   const registerActivity = limiter(10 * 60_000, lim.registrationPerActivityPer10Min, tooMany(msg), (req) =>
@@ -47,12 +55,20 @@ export function publicRoutes({ config, pool, mailer }) {
     }
     const created = await svc.createRegistration(pool, config, req.params.slug, input, req.log);
     // E-mail de confirmation (porte le lien de gestion) : jamais bloquant ni journalisé (ni adresse, ni contenu, ni token).
-    mailer
-      .send({
-        to: input.contact_email,
-        ...confirmationMessage({ config, activityTitle: activity.title, participantName: input.participant_name, manageUrl: created.manage_url }),
-      })
-      .catch((err) => req.log.warn({ event: 'confirmation_mail_failed', code: err.code ?? 'other' }, 'e-mail de confirmation non envoyé'));
+    const addressKey = createHash('sha256').update(input.contact_email).digest('hex').slice(0, 32);
+    if (confirmPerAddress.isBlocked(addressKey) || confirmGlobal.isBlocked('global')) {
+      // Plafond atteint : l'inscription reste acceptée, mais aucun e-mail n'est envoyé (journal sans adresse).
+      req.log.warn({ event: 'confirmation_mail_skipped', reason: 'rate_limited' }, 'e-mail de confirmation non envoyé (plafond)');
+    } else {
+      confirmPerAddress.fail(addressKey); // « fail » = incrément du compteur
+      confirmGlobal.fail('global');
+      mailer
+        .send({
+          to: input.contact_email,
+          ...confirmationMessage({ config, activityTitle: activity.title, participantName: input.participant_name, manageUrl: created.manage_url }),
+        })
+        .catch((err) => req.log.warn({ event: 'confirmation_mail_failed', code: err.code ?? 'other' }, 'e-mail de confirmation non envoyé'));
+    }
     res.status(201).json(created);
   });
 
@@ -67,12 +83,12 @@ export function publicRoutes({ config, pool, mailer }) {
   });
 
   // Désabonnement des e-mails groupés (RFC 8058). GET = page de confirmation (non mutant) ; POST = action (aussi « one-click » depuis le client mail).
-  router.get('/unsubscribe/:token', token, async (req, res) => {
+  router.get('/unsubscribe/:token', unsub, async (req, res) => {
     res.set('Cache-Control', 'no-store');
     res.json(await describeUnsubscribe(pool, req.params.token));
   });
 
-  router.post('/unsubscribe/:token', token, async (req, res) => {
+  router.post('/unsubscribe/:token', unsub, async (req, res) => {
     await unsubscribe(pool, req.params.token, req.log);
     res.status(204).end();
   });

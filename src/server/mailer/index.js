@@ -1,9 +1,8 @@
 import nodemailer from 'nodemailer';
+import { isSingleAddress } from '../address.js';
 
-// Destinataire = UNE adresse simple. Nodemailer interprète les listes (« a@x, b@y ») et les retours à la ligne : refusés ici (défense en profondeur ;
-// les adresses viennent déjà de la base, validées à l'inscription).
-const SINGLE_ADDRESS = /^[^\s<>,;"()[\]\\@]+@[^\s<>,;"()[\]\\@]+\.[^\s<>,;"()[\]\\@]+$/;
-export const isSingleAddress = (to) => typeof to === 'string' && to.length <= 254 && SINGLE_ADDRESS.test(to);
+// Destinataire = UNE adresse simple (voir address.js) : Nodemailer interprèterait sinon les listes et les retours à la ligne.
+export { isSingleAddress };
 
 /** Code grossier d'une erreur de transport : jamais l'adresse, l'hôte ni la réponse SMTP (ce champ est montré aux responsables). */
 export function classifyMailError(err) {
@@ -21,7 +20,7 @@ function smtpTransport(mail) {
     port: mail.port,
     secure: mail.secure,
     ...(mail.user && { auth: { user: mail.user, pass: mail.pass } }),
-    requireTLS: Boolean(mail.user), // jamais d'identifiants en clair
+    requireTLS: Boolean(mail.user) || mail.requireTls, // jamais d'identifiants en clair ; TLS imposé hors hôte local (SMTP_REQUIRE_TLS)
     tls: { rejectUnauthorized: true },
     pool: false,
     connectionTimeout: 10_000,
