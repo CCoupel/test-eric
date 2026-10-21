@@ -172,3 +172,25 @@ describe('allowedOrigins — alias loopback', () => {
     expect(() => check('https://club.example', 'https://127.0.0.1')).toThrow(/Origine refusée/);
   });
 });
+
+describe('checkOrigin — Host non fiable, message explicite', () => {
+  const run = (headers) => {
+    let err;
+    checkOrigin({ baseUrl: 'http://localhost:8080' })({ method: 'POST', headers }, null, (e) => { err = e; });
+    return err;
+  };
+  it('Host forgé (avec ou sans Sec-Fetch-Site same-origin) ne rend pas une Origin tierce acceptable', () => {
+    expect(() => run({ origin: 'http://evil.example', host: 'evil.example', 'sec-fetch-site': 'same-origin' })).toThrow(/Origine refusée/);
+    expect(() => run({ origin: 'http://evil.example', host: 'localhost:8080' })).toThrow(/Origine refusée/);
+  });
+  it('le message indique l’adresse attendue (et l’origine reçue, tronquée)', () => {
+    try {
+      run({ origin: 'http://192.168.1.10:8080' });
+      expect.unreachable();
+    } catch (e) {
+      expect(e.status).toBe(403);
+      expect(e.message).toContain('http://localhost:8080');
+      expect(e.message).toContain('http://192.168.1.10:8080');
+    }
+  });
+});

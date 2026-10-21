@@ -55,13 +55,16 @@ export function allowedOrigins(baseUrl) {
  */
 export const checkOrigin = (config) => {
   const allowed = allowedOrigins(config.baseUrl);
-  const forbidden = () => new HttpError(403, 'forbidden', 'Origine refusée');
+  const expected = new URL(config.baseUrl).origin;
+  // Message explicite : adresse à utiliser (APP_BASE_URL est public : présent dans les liens d'inscription).
+  const forbidden = (origin) =>
+    new HttpError(403, 'forbidden', `Origine refusée : ouvrez l’application à l’adresse ${expected}${origin ? ` (reçu : ${String(origin).slice(0, 100)})` : ''}`);
   return (req, _res, next) => {
     if (SAFE.has(req.method)) return next();
     if (req.headers['sec-fetch-site'] === 'cross-site') throw forbidden();
     const origin = req.headers.origin;
     if (origin) {
-      if (!allowed.has(origin)) throw forbidden();
+      if (!allowed.has(origin)) throw forbidden(origin);
     } else if (parseCookies(req.headers.cookie)[COOKIE_NAME]) {
       throw forbidden();
     }
