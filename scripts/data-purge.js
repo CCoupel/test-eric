@@ -7,7 +7,7 @@ const config = loadConfig();
 const pool = createPool(config);
 try {
   const r = await purgeExpired(pool, { retentionMonths: config.retentionMonths });
-  console.log(`Purge : ${r.registrationsDeleted} inscription(s) supprimée(s), ${r.recipientsAnonymized} destinataire(s) anonymisé(s).`);
+  console.log(`Purge : ${r.registrationsDeleted} inscription(s) supprimée(s), ${r.recipientsAnonymized} destinataire(s) anonymisé(s), ${r.mailingsDeleted} envoi(s) supprimé(s).`);
 } catch (err) {
   console.error(`Purge en échec : ${err.message}`);
   process.exitCode = 1;

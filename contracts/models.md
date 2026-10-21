@@ -90,6 +90,7 @@ Champs calculés (jamais stockés) : `registrations_count` (inscriptions actives
 | status | text | not null, `sending` \| `sent` \| `partial` \| `failed` | `partial` = au moins un échec |
 | recipients_count | integer | not null | destinataires uniques |
 | sent_count / failed_count | integer | not null default 0 | |
+| fingerprint | text | nullable | empreinte (sujet, corps, activités) : refus d'un envoi identique < 5 min |
 | transport | text | not null, `smtp` \| `stub` | mécanisme utilisé |
 | created_at / completed_at | timestamptz | | |
 
@@ -112,10 +113,12 @@ Champs calculés (jamais stockés) : `registrations_count` (inscriptions actives
 | status | text | `sent` \| `failed` \| `stubbed` | |
 | error | text | nullable | message transport |
 | sent_at | timestamptz | nullable | |
+| unsubscribe_token_hash | text | unique, nullable | SHA-256 du token du lien de désabonnement ; `NULL` une fois utilisé ou anonymisé |
 
 - Destinataires = `contact_email` **dédupliqués** sur l'union des inscriptions actives des activités choisies.
 - Envoi synchrone en v1 (boucle séquentielle, un message par destinataire, `Bcc` interdit) ; timeout SMTP 10 s
   par message ; l'historique est écrit avant le premier envoi (`status = sending`) puis mis à jour.
+- Purge : `mailings` (et cascade) plus vieux que `RETENTION_MONTHS` supprimés par le même job que les inscriptions.
 - Transport `stub` (SMTP non configuré) : rien n'est envoyé, chaque destinataire est `stubbed`, le contenu est
   journalisé (`logger.info`) — vérifiable en tests et en QUALIF.
 
@@ -134,6 +137,8 @@ Champs calculés (jamais stockés) : `registrations_count` (inscriptions actives
 | `DATABASE_URL` | oui | — | `postgres://user:pass@host:5432/db` |
 | `SESSION_SECRET` | oui | — | ≥ 32 car., ≥ 10 caractères distincts (démarrage refusé sinon) |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` | oui (1er démarrage) | — | seed du compte initial ; mot de passe ≥ 12 car., valeurs triviales/d'exemple refusées (démarrage refusé) |
-| `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` / `SMTP_USER` / `SMTP_PASS` | non | vide → stub | Nodemailer |
-| `MAIL_FROM` | si SMTP | — | `Club <no-reply@domaine>` |
+| `SMTP_HOST` + `MAIL_FROM` | non (ensemble) | vide → stub | SMTP réel (Nodemailer, timeouts 10 s, TLS vérifié, `requireTLS` si `SMTP_USER`). `MAIL_FROM` = adresse unique (`a@b.fr` ou `Nom <a@b.fr>`), seul `From` utilisé. En production sans SMTP : avertissement au démarrage (aucun e-mail ne part) |
+| `SMTP_PORT` / `SMTP_SECURE` | non | `587` (`465` si secure) / `false` | |
+| `SMTP_USER` + `SMTP_PASS` | non (ensemble) | — | jamais journalisés ni exposés |
+| `MAILING_MAX_RECIPIENTS` / `MAILING_SYNC_MAX_RECIPIENTS` / `RATE_LIMIT_MAILING_PER_USER_10MIN` | non | `500` / `100` / `5` | plafond de destinataires ; seuil du mode synchrone (201) vs tâche de fond (202) ; envois par responsable / 10 min |
 | `CONSENT_TEXT_VERSION` | non | `2026-10` | version du texte RGPD ; la version effective porte le suffixe `-r<N>` si `RETENTION_MONTHS` ≠ 12 (le texte accepté mentionne la durée) |

@@ -179,7 +179,7 @@ export async function getByToken(pool, config, token) {
  */
 export async function anonymizeRecipients(db, registrationIds) {
   if (!registrationIds.length) return 0;
-  const r = await db.query('UPDATE mailing_recipients SET email = NULL, error = NULL, registration_id = NULL WHERE registration_id = ANY($1)', [registrationIds]);
+  const r = await db.query('UPDATE mailing_recipients SET email = NULL, error = NULL, unsubscribe_token_hash = NULL, registration_id = NULL WHERE registration_id = ANY($1)', [registrationIds]);
   return r.rowCount;
 }
 
@@ -216,9 +216,12 @@ export async function removeRegistrationAsManager(pool, activityId, registration
 
 const PURGE_BATCH = 500;
 
-/** Purge RGPD : inscriptions des activités terminées depuis plus de `retentionMonths` mois. Idempotent, par lots de 500 (une transaction par lot). */
+/**
+ * Purge RGPD : inscriptions des activités terminées depuis plus de `retentionMonths` mois, puis historique d'envois
+ * (`mailings` et, en cascade, `mailing_activities` / `mailing_recipients`) plus vieux que la rétention. Idempotent, par lots de 500.
+ */
 export async function purgeExpired(pool, { retentionMonths }) {
-  const total = { registrationsDeleted: 0, recipientsAnonymized: 0 };
+  const total = { registrationsDeleted: 0, recipientsAnonymized: 0, mailingsDeleted: 0 };
   for (;;) {
     const batch = await withTx(pool, async (db) => {
       const { rows } = await db.query(
@@ -233,6 +236,16 @@ export async function purgeExpired(pool, { retentionMonths }) {
     });
     total.registrationsDeleted += batch.count;
     total.recipientsAnonymized += batch.anonymized;
-    if (batch.count < PURGE_BATCH) return total;
+    if (batch.count < PURGE_BATCH) break;
   }
+  for (;;) {
+    const r = await pool.query(
+      `DELETE FROM mailings WHERE id IN (
+         SELECT id FROM mailings WHERE created_at < now() - make_interval(months => $1) ORDER BY id LIMIT $2)`,
+      [retentionMonths, PURGE_BATCH],
+    );
+    total.mailingsDeleted += r.rowCount;
+    if (r.rowCount < PURGE_BATCH) break;
+  }
+  return total;
 }

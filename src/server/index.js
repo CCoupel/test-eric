@@ -14,16 +14,22 @@ export async function start(config = loadConfig(), log = console) {
     // Derrière un reverse proxy TLS, sans TRUST_PROXY toutes les IP seraient celles du proxy : rate-limit mutualisé entre tous les visiteurs.
     log.warn?.('TRUST_PROXY non défini en production HTTPS : si un reverse proxy est devant, l’IP vue par les limiteurs sera celle du proxy (voir contracts/models.md).');
   }
+  if (config.isProduction && config.mail.transport === 'stub') {
+    log.warn?.('SMTP non configuré en production : aucun e-mail ne sera envoyé (transport stub). Renseigner SMTP_HOST et MAIL_FROM.');
+  }
   const pool = createPool(config, log);
   let server;
   let purge;
+  let app;
   try {
     const applied = await runMigrations(pool);
     if (applied.length) log.log(`Migrations appliquées : ${applied.join(', ')}`);
     await seedAdmin(pool, config, log);
+    app = createApp({ config, pool });
+    await app.locals.ready;
     purge = schedulePurge(pool, config, log);
 
-    server = createApp({ config, pool }).listen(config.port);
+    server = app.listen(config.port);
     await new Promise((resolve, reject) => server.once('listening', resolve).once('error', reject));
   } catch (err) {
     if (purge) clearInterval(purge.timer);
@@ -39,7 +45,7 @@ export async function start(config = loadConfig(), log = console) {
       timer.unref();
       server.close(() => {
         clearTimeout(timer);
-        purge.first.finally(() => pool.end()).finally(resolve);
+        Promise.all([purge.first, app.locals.mailings.drain()]).finally(() => pool.end()).finally(resolve);
       });
       server.closeIdleConnections();
     });

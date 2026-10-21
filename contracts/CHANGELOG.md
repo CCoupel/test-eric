@@ -2,6 +2,14 @@
 
 > Changements de contrats (API, schemas) : `BREAKING` | `CHANGED` | `ADDED`. Lu par le CDP au GATE 2.
 
+## [20261021e] — E-mails groupés (issue #7, exigences security E1-E14 + désabonnement)
+
+- **[ADDED]** `POST /api/mailings` — `202` (envoi en tâche de fond) au-delà de 100 destinataires ; `409 too_many_recipients | mailing_in_progress | duplicate_mailing` ; `429 rate_limited`
+- **[ADDED]** `GET /api/public/unsubscribe/:token`, `POST /api/public/unsubscribe/:token` — désabonnement en un clic (RFC 8058) ; route frontend `/u/:token`
+- **[ADDED]** en-têtes `List-Unsubscribe` / `List-Unsubscribe-Post` ; pied de page ; e-mail de confirmation d'inscription (porte le lien de gestion)
+- **[ADDED]** colonnes `mailing_recipients.unsubscribe_token_hash`, `mailings.fingerprint` (migration 008) ; variables `SMTP_*`, `MAIL_FROM`, `MAILING_*`, `RATE_LIMIT_MAILING_PER_USER_10MIN`
+- **[CHANGED]** purge RGPD : inclut l'historique d'envois (`mailings`) au-delà de `RETENTION_MONTHS`
+
 ## [20261021d] — Honeypot renommé (bug QUALIF 0.1.0.4)
 
 - **[CHANGED]** `POST /api/public/activities/:slug/registrations` — honeypot `website` → `hp_extra` ; `website` toléré et ignoré (la saisie automatique

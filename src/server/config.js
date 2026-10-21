@@ -86,6 +86,30 @@ export function loadConfig(env = process.env) {
   // Garde-fou : en production, relever la limite de login au-delà de 50/min/IP affaiblirait le bruteforce-guard (surcharge réservée aux tests/E2E).
   if (nodeEnv === 'production' && authLimits.loginPerIpPerMin > 50) problems.push('RATE_LIMIT_LOGIN_PER_IP_MIN ne doit pas dépasser 50 en production'); // login : 10/min/IP (contrat), relevé uniquement pour l'E2E
 
+  // Messagerie : SMTP réel si SMTP_HOST + MAIL_FROM, sinon transport « stub » (rien n'est envoyé).
+  const smtpHost = str('SMTP_HOST');
+  const mailFrom = str('MAIL_FROM');
+  const smtpUser = str('SMTP_USER');
+  const smtpPass = env.SMTP_PASS === undefined || String(env.SMTP_PASS) === '' ? undefined : String(env.SMTP_PASS);
+  const smtpSecureRaw = str('SMTP_SECURE', 'false');
+  if (!['true', 'false'].includes(smtpSecureRaw)) problems.push('SMTP_SECURE doit valoir true ou false');
+  const smtpPort = Number(str('SMTP_PORT', smtpSecureRaw === 'true' ? '465' : '587'));
+  if (!Number.isInteger(smtpPort) || smtpPort < 1 || smtpPort > 65535) problems.push('SMTP_PORT doit être un port valide');
+  if (Boolean(smtpHost) !== Boolean(mailFrom)) problems.push('SMTP_HOST et MAIL_FROM doivent être fournis ensemble');
+  if (Boolean(smtpUser) !== Boolean(smtpPass)) problems.push('SMTP_USER et SMTP_PASS doivent être fournis ensemble');
+  if (mailFrom && !/^(?:[^<>\r\n"@]+ )?<?[^\s<>@,;"]+@[^\s<>@,;"]+\.[^\s<>@,;"]+>?$/.test(mailFrom)) {
+    problems.push('MAIL_FROM doit être une adresse unique (« a@b.fr » ou « Nom <a@b.fr> »), sans retour à la ligne');
+  }
+  if (smtpHost && /[\s/]/.test(smtpHost)) problems.push('SMTP_HOST invalide');
+  const mail = smtpHost && mailFrom
+    ? { transport: 'smtp', host: smtpHost, port: smtpPort, secure: smtpSecureRaw === 'true', user: smtpUser ?? null, pass: smtpPass ?? null, from: mailFrom }
+    : { transport: 'stub', from: mailFrom ?? null };
+  const mailLimits = {
+    perUserPer10Min: intVar('RATE_LIMIT_MAILING_PER_USER_10MIN', 5),
+    maxRecipients: intVar('MAILING_MAX_RECIPIENTS', 500, 5000),
+    syncMaxRecipients: intVar('MAILING_SYNC_MAX_RECIPIENTS', 100, 5000),
+  };
+
   // TRUST_PROXY : nombre de sauts de proxy de confiance (ex. 1), ou liste d'IP/CIDR/alias Express. `true` est refusé (IP usurpable).
   const trustRaw = str('TRUST_PROXY', 'false');
   let trustProxy = false;
@@ -109,6 +133,8 @@ export function loadConfig(env = process.env) {
     retentionMonths,
     publicLimits,
     authLimits,
+    mail,
+    mailLimits,
     admin: admin.email ? admin : null,
     // La version identifie le texte accepté, qui interpole la durée de conservation : hors défaut (12 mois), suffixe `-r<N>`.
     consentTextVersion: retentionMonths === 12 ? consentBase : `${consentBase}-r${retentionMonths}`,

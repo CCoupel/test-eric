@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import { ipKeyGenerator, rateLimit } from 'express-rate-limit';
 import { HttpError, parse } from '../errors.js';
+import { confirmationMessage } from '../mailer/render.js';
 import * as svc from '../services/registrations.js';
+import { describeUnsubscribe, unsubscribe } from '../services/unsubscribe.js';
 import { SLUG_RE } from '../services/registrations.js';
 
 const tooMany = (msg) => (req, _res, next) => {
@@ -13,7 +15,7 @@ const limiter = (windowMs, limit, handler, keyGenerator) =>
   rateLimit({ windowMs, limit, standardHeaders: false, legacyHeaders: false, handler, ...(keyGenerator && { keyGenerator }) });
 
 /** Routes publiques (sans compte) : fiche d'activité, inscription, gestion par token. */
-export function publicRoutes({ config, pool }) {
+export function publicRoutes({ config, pool, mailer }) {
   const router = Router();
   const lim = config.publicLimits;
   const msg = 'Trop de requêtes, réessayez dans un moment';
@@ -37,13 +39,21 @@ export function publicRoutes({ config, pool }) {
   });
 
   router.post('/activities/:slug/registrations', registerIp, registerActivity, async (req, res) => {
-    await svc.findPublicActivity(pool, req.params.slug); // 404 (inconnu / brouillon) avant la validation du corps
+    const activity = await svc.findPublicActivity(pool, req.params.slug); // 404 (inconnu / brouillon) avant la validation du corps
     const input = parse(svc.createRegistrationSchema, req.body ?? {});
     if (input.hp_extra) {
       req.log.warn({ event: 'registration_honeypot', ip: req.ip }, 'public');
       return res.status(201).json(svc.fakeRegistration(config, input)); // le robot croit avoir réussi
     }
-    res.status(201).json(await svc.createRegistration(pool, config, req.params.slug, input, req.log));
+    const created = await svc.createRegistration(pool, config, req.params.slug, input, req.log);
+    // E-mail de confirmation (porte le lien de gestion) : jamais bloquant ni journalisé (ni adresse, ni contenu, ni token).
+    mailer
+      .send({
+        to: input.contact_email,
+        ...confirmationMessage({ config, activityTitle: activity.title, participantName: input.participant_name, manageUrl: created.manage_url }),
+      })
+      .catch((err) => req.log.warn({ event: 'confirmation_mail_failed', code: err.code ?? 'other' }, 'e-mail de confirmation non envoyé'));
+    res.status(201).json(created);
   });
 
   router.get('/registrations/:token', token, async (req, res) => {
@@ -53,6 +63,17 @@ export function publicRoutes({ config, pool }) {
 
   router.delete('/registrations/:token', token, async (req, res) => {
     await svc.deleteByToken(pool, req.params.token, req.log);
+    res.status(204).end();
+  });
+
+  // Désabonnement des e-mails groupés (RFC 8058). GET = page de confirmation (non mutant) ; POST = action (aussi « one-click » depuis le client mail).
+  router.get('/unsubscribe/:token', token, async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    res.json(await describeUnsubscribe(pool, req.params.token));
+  });
+
+  router.post('/unsubscribe/:token', token, async (req, res) => {
+    await unsubscribe(pool, req.params.token, req.log);
     res.status(204).end();
   });
 

@@ -7,7 +7,7 @@ export function schedulePurge(pool, config, log = console) {
   const run = async () => {
     try {
       const r = await purgeExpired(pool, { retentionMonths: config.retentionMonths });
-      if (r.registrationsDeleted) log.log?.(`Purge RGPD : ${r.registrationsDeleted} inscription(s) supprimée(s), ${r.recipientsAnonymized} destinataire(s) anonymisé(s).`);
+      if (r.registrationsDeleted || r.mailingsDeleted) log.log?.(`Purge RGPD : ${r.registrationsDeleted} inscription(s) supprimée(s), ${r.recipientsAnonymized} destinataire(s) anonymisé(s), ${r.mailingsDeleted} envoi(s) supprimé(s).`);
     } catch (err) {
       log.error?.({ message: err.message, code: err.code }, 'purge RGPD en échec');
     }

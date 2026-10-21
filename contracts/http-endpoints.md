@@ -175,11 +175,17 @@ Objet `Mailing` :
 **Errors** : 400, 401, 404 (une activité inconnue)
 
 ### POST /api/mailings
-**Auth** : Session — crée l'envoi, envoie **synchroniquement**, renvoie le résultat.
-**Request** : `{ "activity_ids": ["uuid"], "subject": "string", "body": "string" }`
-**Response 201** : `{ "mailing": Mailing }` (`status` final : `sent|partial|failed`)
-**Errors** : 400 (liste vide, sujet/corps vides ou trop longs), 401, 404, `409 no_recipients`
-> Contrainte technique acceptée : réponse pouvant durer plusieurs secondes (≤ 10 s × N). Hors-contrat perf
+**Auth** : Session — crée l'envoi et envoie un message **par destinataire** (jamais de Bcc), renvoie le résultat.
+**Request** (champs stricts, tout autre champ → 400) : `{ "activity_ids": ["uuid"] (1..20, uniques), "subject": "string" (1..200, aucun caractère de contrôle), "body": "string" (texte brut, 1..20000) }`
+**Response 201** : `{ "mailing": Mailing }` (`status` final : `sent|partial|failed`) — jusqu'à 100 destinataires (`MAILING_SYNC_MAX_RECIPIENTS`).
+**Response 202** : `{ "mailing": Mailing }` avec `status = "sending"` au-delà : l'envoi se poursuit en tâche de fond (même si le client se
+déconnecte) ; le frontend interroge `GET /api/mailings/:id` jusqu'à `sent|partial|failed`.
+**Errors** : 400, 401, 403 (Origin), 404, `409 no_recipients`, `409 too_many_recipients` (> `MAILING_MAX_RECIPIENTS`, défaut 500),
+`409 mailing_in_progress` (un seul envoi à la fois), `409 duplicate_mailing` (même envoi < 5 min), `429 rate_limited` (5 / 10 min / responsable)
+Chaque message contient : `From = MAIL_FROM` (jamais une valeur client), le texte **échappé** en HTML, un pied de page (motif de réception,
+lien de désabonnement `/u/<token>`, confidentialité, contact) et les en-têtes `List-Unsubscribe` (URL https + mailto) et
+`List-Unsubscribe-Post: List-Unsubscribe=One-Click` (RFC 8058). `error` des destinataires = code grossier (`timeout|connection|auth|rejected|other`).
+> Contrainte technique acceptée : réponse pouvant durer plusieurs secondes (≤ 10 s × N jusqu'à 100 destinataires). Hors-contrat perf
 > (`testing.perf` non applicable à cet endpoint). Le frontend affiche un état « envoi en cours ».
 
 ### GET /api/mailings
@@ -198,6 +204,20 @@ bandeau d'avertissement dans l'écran d'envoi quand `stub`.
 
 ---
 
+## Désabonnement des e-mails groupés (issue #7)
+
+Le lien `/u/<token>` figure dans chaque message ; le token est propre au message et à son destinataire, stocké **haché**, à usage unique.
+Effet = **désinscription** des activités de cet envoi (suppression physique + anonymisation, comme `/r/:token`) pour l'adresse concernée.
+
+### GET /api/public/unsubscribe/:token
+**Auth** : Public (non mutant, 30/min/IP, `no-store`) — **Response 200** : `{ "activities": [ { "title", "starts_at" } ] }` — **Errors** : 404 uniforme (inconnu, malformé, déjà utilisé, inscription supprimée).
+
+### POST /api/public/unsubscribe/:token
+**Auth** : Public (30/min/IP ; `Origin` vérifié s'il est présent) — **Response 204** — **Errors** : 404 uniforme. Accepte le POST « one-click » des clients
+e-mail (RFC 8058, corps `List-Unsubscribe=One-Click`, sans `Origin` ni cookie).
+
+---
+
 ## Routes frontend (React Router)
 
 | Route | Auth | Écran |
@@ -211,3 +231,4 @@ bandeau d'avertissement dans l'écran d'envoi quand `stub`.
 | `/mailings/:id` | Session | Détail d'un envoi |
 | `/a/:slug` | Public | Fiche publique + formulaire d'inscription |
 | `/r/:token` | Public | Gestion de l'inscription (désinscription) |
+| `/u/:token` | Public | Désabonnement des e-mails groupés (confirmation puis `POST`) |
