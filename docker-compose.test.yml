@@ -1,13 +1,14 @@
-# Base PostgreSQL ephemere pour les tests d'integration (local et CI — meme chemin, C11).
-# Demarree/arretee par scripts/ci.sh quand DATABASE_URL est vide :
-#   docker compose -f docker-compose.test.yml up -d --wait db
+# Base PostgreSQL ephemere pour les tests (local et CI — meme chemin, C11).
+# Demarree/arretee par scripts/ci.sh quand DATABASE_URL est vide (docker ou podman,
+# voir scripts/container-env.sh) :
 #   DATABASE_URL=postgres://club:club@localhost:5433/club_test
 # Identifiants de TEST uniquement (aucune donnee reelle, base en tmpfs) — jamais reutilises en QUALIF/PROD.
+# Images en nom complet (docker.io/...) : podman refuse les noms courts sans registre de recherche.
 name: inscriptions-club-test
 
 services:
   db:
-    image: postgres:16-alpine
+    image: docker.io/library/postgres:16-alpine
     environment:
       POSTGRES_DB: club_test
       POSTGRES_USER: club
