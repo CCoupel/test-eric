@@ -1,0 +1,110 @@
+<!--
+mockup:
+  composant: espace_responsable
+  feature: emails
+  version: 0.1.0
+  type: ui
+  issue: "#7"
+  validee_le:
+  complete: ["v0.1.0/ui/espace_responsable__activites.html"]
+  remplace: []
+-->
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — Espace responsable : e-mails groupés</title>
+<style>
+  :root { --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb; --bg:#f9fafb; --card:#fff; --accent:#2563eb; --ok:#16a34a; --warn:#d97706; --danger:#dc2626; }
+  * { box-sizing:border-box; } body { margin:0; font:15px/1.45 system-ui, sans-serif; color:var(--ink); background:var(--bg); }
+  header { background:var(--card); border-bottom:1px solid var(--line); padding:12px 16px; display:flex; align-items:center; gap:16px; }
+  header .brand { font-weight:700; } header nav a { margin-right:14px; color:var(--ink); text-decoration:none; } header nav a.active { color:var(--accent); font-weight:600; }
+  header .user { margin-left:auto; color:var(--muted); font-size:13px; }
+  main { max-width:960px; margin:0 auto; padding:16px; }
+  h1 { font-size:22px; margin:8px 0 16px; } h2 { font-size:17px; margin:16px 0 8px; }
+  .screen { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:16px; margin-bottom:28px; }
+  .screen > .label { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin:-4px 0 12px; }
+  .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  .btn { border:1px solid var(--line); background:#fff; padding:8px 14px; border-radius:6px; cursor:pointer; font:inherit; }
+  .btn.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  table { width:100%; border-collapse:collapse; } th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); font-size:14px; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; font-weight:600; }
+  .b-sent { background:#dcfce7; color:#166534; } .b-partial { background:#fef3c7; color:#92400e; } .b-failed { background:#fee2e2; color:#991b1b; } .b-stub { background:#f3f4f6; color:#374151; }
+  label { display:block; font-size:13px; color:var(--muted); margin:10px 0 4px; } input, textarea { width:100%; padding:8px; border:1px solid var(--line); border-radius:6px; font:inherit; }
+  .hint { font-size:13px; color:var(--muted); }
+  .banner { border-radius:6px; padding:10px 12px; font-size:14px; margin-bottom:12px; } .banner.warn { background:#fef3c7; color:#92400e; border:1px solid #fcd34d; }
+  .check { display:flex; gap:8px; align-items:center; padding:6px 0; font-size:14px; } .check input { width:auto; }
+  .preview { background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:10px; font-size:14px; }
+  pre { white-space:pre-wrap; font:inherit; margin:0; }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="brand">Inscriptions-club</span>
+  <nav><a href="#">Activités</a><a class="active" href="#">E-mails</a></nav>
+  <span class="user">Marie Dupont · <a href="#">Se déconnecter</a></span>
+</header>
+
+<main>
+
+<!-- ÉCRAN 1 : /mailings -->
+<section class="screen">
+  <div class="label">Écran /mailings — historique</div>
+  <div class="row" style="justify-content:space-between"><h1 style="margin:0">E-mails envoyés</h1><button class="btn primary">+ Nouvel e-mail</button></div>
+  <table>
+    <thead><tr><th>Date</th><th>Objet</th><th>Activités</th><th>Destinataires</th><th>Par</th><th>Statut</th></tr></thead>
+    <tbody>
+      <tr><td>14/10/2026 18:32</td><td><a href="#">Rappel : kimono et gourde</a></td><td>Stage judo Toussaint</td><td>12</td><td>Marie D.</td><td><span class="badge b-sent">Envoyé 12/12</span></td></tr>
+      <tr><td>10/10/2026 09:05</td><td><a href="#">Horaires du tournoi</a></td><td>Sortie tournoi, Cours d'essai</td><td>25</td><td>Paul R.</td><td><span class="badge b-partial">Partiel 24/25</span></td></tr>
+      <tr><td>02/10/2026 20:11</td><td><a href="#">Test de configuration</a></td><td>Cours d'essai karaté</td><td>8</td><td>Marie D.</td><td><span class="badge b-stub">Simulé (SMTP non configuré)</span></td></tr>
+    </tbody>
+  </table>
+  <p class="hint">Liste vide : « Aucun e-mail envoyé pour l'instant. »</p>
+</section>
+
+<!-- ÉCRAN 2 : /mailings/new -->
+<section class="screen" style="max-width:720px">
+  <div class="label">Écran /mailings/new — composer</div>
+  <h1 style="margin-top:0">Nouvel e-mail aux inscrits</h1>
+  <div class="banner warn">⚠ L'envoi d'e-mails n'est pas configuré (SMTP). L'envoi sera <strong>simulé</strong> et enregistré dans l'historique sans partir. (bandeau affiché uniquement en mode stub)</div>
+
+  <h2>Destinataires : inscrits de…</h2>
+  <div class="check"><input type="checkbox" checked> Stage judo Toussaint <span class="hint">— 12 inscrits</span></div>
+  <div class="check"><input type="checkbox" checked> Sortie tournoi régional <span class="hint">— 18 inscrits</span></div>
+  <div class="check"><input type="checkbox"> Cours d'essai karaté <span class="hint">— 8 inscrits (fermée)</span></div>
+  <p class="hint"><strong>25 destinataires uniques</strong> (les e-mails en double entre activités sont regroupés). Chaque personne reçoit son propre message : les adresses ne sont jamais visibles des autres.</p>
+
+  <label>Objet *</label><input value="Rappel : kimono et gourde">
+  <label>Message *</label><textarea rows="6">Bonjour,
+
+Petit rappel pour mercredi : pensez au kimono et à une gourde. Le goûter est offert par le club.
+
+À mercredi !
+Marie</textarea>
+  <div class="row" style="margin-top:14px"><button class="btn primary">Envoyer à 25 destinataires</button><button class="btn">Annuler</button></div>
+  <p class="hint">Pendant l'envoi : bouton désactivé, texte « Envoi en cours… » (l'envoi peut prendre quelques secondes). Aucune activité cochée ou 0 destinataire → bouton désactivé.</p>
+</section>
+
+<!-- ÉCRAN 3 : /mailings/:id -->
+<section class="screen">
+  <div class="label">Écran /mailings/:id — détail</div>
+  <h1 style="margin-top:0">Horaires du tournoi <span class="badge b-partial">Partiel 24/25</span></h1>
+  <p class="hint">Envoyé le 10/10/2026 09:05 par Paul Roux · Activités : Sortie tournoi régional, Cours d'essai karaté · Transport : SMTP</p>
+  <h2>Message</h2>
+  <div class="preview"><pre>Bonjour, rendez-vous à 8h devant le gymnase Jean-Moulin…</pre></div>
+  <h2>Destinataires (25)</h2>
+  <table>
+    <thead><tr><th>E-mail</th><th>Statut</th><th>Détail</th></tr></thead>
+    <tbody>
+      <tr><td>sophie.martin@mail.fr</td><td><span class="badge b-sent">envoyé</span></td><td>10/10/2026 09:05</td></tr>
+      <tr><td>k.benali@mail.fr</td><td><span class="badge b-failed">échec</span></td><td>550 mailbox unavailable</td></tr>
+      <tr><td><em class="hint">désinscrit depuis</em></td><td><span class="badge b-sent">envoyé</span></td><td>10/10/2026 09:06</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</body>
+</html>

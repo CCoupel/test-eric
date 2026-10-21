@@ -1,0 +1,104 @@
+<!--
+mockup:
+  composant: page_publique
+  feature: inscription
+  version: 0.1.0
+  type: ui
+  issue: "#6"
+  validee_le:
+  complete: []
+  remplace: []
+-->
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — Page publique : inscription</title>
+<style>
+  :root { --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb; --bg:#f9fafb; --card:#fff; --accent:#2563eb; --ok:#16a34a; --danger:#dc2626; }
+  * { box-sizing:border-box; } body { margin:0; font:15px/1.45 system-ui, sans-serif; color:var(--ink); background:var(--bg); }
+  main { max-width:560px; margin:0 auto; padding:16px; }
+  .screen { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:20px; margin-bottom:28px; }
+  .screen > .label { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin:-4px 0 12px; }
+  h1 { font-size:22px; margin:0 0 6px; } h2 { font-size:17px; margin:18px 0 8px; }
+  .meta { color:var(--muted); } .places { font-weight:600; color:var(--ok); } .full { font-weight:600; color:var(--danger); }
+  label { display:block; font-size:13px; color:var(--muted); margin:10px 0 4px; } input { width:100%; padding:9px; border:1px solid var(--line); border-radius:6px; font:inherit; }
+  .choice { display:flex; gap:8px; margin:8px 0; } .choice label { display:flex; align-items:center; gap:8px; margin:0; padding:10px; border:1px solid var(--line); border-radius:6px; flex:1; color:var(--ink); cursor:pointer; }
+  .choice label.on { border-color:var(--accent); background:#eff6ff; }
+  .consent { display:flex; gap:10px; align-items:flex-start; font-size:13px; margin:14px 0; } .consent input { width:auto; margin-top:3px; }
+  .btn { border:1px solid var(--line); background:#fff; padding:10px 16px; border-radius:6px; cursor:pointer; font:inherit; width:100%; }
+  .btn.primary { background:var(--accent); color:#fff; border-color:var(--accent); } .btn.danger { background:var(--danger); color:#fff; border-color:var(--danger); }
+  .hint { font-size:13px; color:var(--muted); } .error { color:var(--danger); font-size:13px; }
+  .box { background:var(--bg); border:1px dashed var(--line); padding:10px; border-radius:6px; font-size:13px; word-break:break-all; }
+  .foot { text-align:center; font-size:12px; color:var(--muted); margin-top:20px; }
+</style>
+</head>
+<body>
+<main>
+
+<!-- ÉCRAN 1 : /a/:slug — activité ouverte -->
+<section class="screen">
+  <div class="label">Écran /a/:slug — activité ouverte</div>
+  <h1>Stage judo Toussaint</h1>
+  <p class="meta">Mercredi 28 octobre 2026 à 14:00 · Dojo municipal</p>
+  <p>Apporter kimono et gourde. Goûter offert.</p>
+  <p class="places">8 places restantes</p>
+
+  <h2>Je m'inscris</h2>
+  <div class="choice">
+    <label class="on"><input type="radio" name="who" checked> J'inscris mon enfant (mineur)</label>
+    <label><input type="radio" name="who"> Je m'inscris moi-même (majeur)</label>
+  </div>
+
+  <label>Nom du participant (l'enfant) *</label><input value="Léo Martin">
+  <label>Votre nom (parent ou tuteur) *</label><input value="Sophie Martin">
+  <label>Votre e-mail *</label><input type="email" value="sophie.martin@mail.fr">
+  <p class="hint">Quand « je m'inscris moi-même » est choisi, le champ « Votre nom » disparaît : le participant est le contact.</p>
+
+  <div class="consent">
+    <input type="checkbox" checked>
+    <span>J'accepte que le club conserve ces informations (nom, e-mail) pour gérer cette activité et me contacter à son sujet.
+      Je peux me désinscrire et faire supprimer ces données à tout moment depuis le lien reçu. En inscrivant un mineur,
+      je confirme être son parent ou tuteur légal. <a href="#">Politique de confidentialité</a></span>
+  </div>
+  <p class="error">Exemples de refus : « Cette activité est complète. » · « Vous êtes déjà inscrit à cette activité. » · « Les inscriptions sont fermées. »</p>
+  <button class="btn primary">Confirmer l'inscription</button>
+</section>
+
+<!-- ÉCRAN 2 : confirmation après POST -->
+<section class="screen">
+  <div class="label">Écran /a/:slug — confirmation</div>
+  <h1>Inscription confirmée ✔</h1>
+  <p><strong>Léo Martin</strong> est inscrit à <strong>Stage judo Toussaint</strong> (28/10/2026 14:00, Dojo municipal).</p>
+  <h2>Conservez ce lien</h2>
+  <div class="box">https://club.example.org/r/9fK2…Lm7Q</div>
+  <p class="hint">Il permet de vous désinscrire et de supprimer vos données. Il n'est affiché qu'une seule fois (il vous sera aussi envoyé par e-mail si le club a configuré l'envoi).</p>
+  <button class="btn">Copier le lien</button>
+</section>
+
+<!-- ÉCRAN 3 : /a/:slug fermée ou complète -->
+<section class="screen">
+  <div class="label">Écran /a/:slug — fermée / complète</div>
+  <h1>Stage judo Toussaint</h1>
+  <p class="meta">Mercredi 28 octobre 2026 à 14:00 · Dojo municipal</p>
+  <p class="full">Les inscriptions sont fermées.</p>
+  <p class="hint">Variante complète : « Cette activité est complète (20/20). » — formulaire masqué dans les deux cas. Un brouillon ou un lien inconnu affiche « Activité introuvable » (404).</p>
+</section>
+
+<!-- ÉCRAN 4 : /r/:token -->
+<section class="screen">
+  <div class="label">Écran /r/:token — gérer mon inscription</div>
+  <h1>Mon inscription</h1>
+  <p><strong>Léo Martin</strong> (contact : Sophie Martin, sophie.martin@mail.fr)</p>
+  <p class="meta">Stage judo Toussaint · 28/10/2026 14:00 · Dojo municipal · <a href="#">voir l'activité</a></p>
+  <h2>Me désinscrire</h2>
+  <p class="hint">La désinscription supprime définitivement vos données personnelles (nom, e-mail) pour cette activité. Vous pourrez vous réinscrire tant que l'activité est ouverte.</p>
+  <button class="btn danger">Me désinscrire et supprimer mes données</button>
+  <p class="hint" style="margin-top:12px">Après confirmation : « Vous êtes désinscrit. Vos données ont été supprimées. » Lien inconnu ou déjà utilisé : « Inscription introuvable. »</p>
+</section>
+
+<p class="foot">Inscriptions-club · <a href="#">Politique de confidentialité</a></p>
+</main>
+</body>
+</html>

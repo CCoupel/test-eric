@@ -1,0 +1,123 @@
+<!--
+mockup:
+  composant: espace_responsable
+  feature: activites
+  version: 0.1.0
+  type: ui
+  issue: "#5"
+  validee_le:
+  complete: []
+  remplace: []
+-->
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — Espace responsable : activités</title>
+<style>
+  :root { --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb; --bg:#f9fafb; --card:#fff; --accent:#2563eb; --ok:#16a34a; --warn:#d97706; --danger:#dc2626; }
+  * { box-sizing:border-box; } body { margin:0; font:15px/1.45 system-ui, sans-serif; color:var(--ink); background:var(--bg); }
+  header { background:var(--card); border-bottom:1px solid var(--line); padding:12px 16px; display:flex; align-items:center; gap:16px; }
+  header .brand { font-weight:700; } header nav a { margin-right:14px; color:var(--ink); text-decoration:none; } header nav a.active { color:var(--accent); font-weight:600; }
+  header .user { margin-left:auto; color:var(--muted); font-size:13px; }
+  main { max-width:960px; margin:0 auto; padding:16px; }
+  h1 { font-size:22px; margin:8px 0 16px; } h2 { font-size:17px; margin:0 0 10px; }
+  .screen { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:16px; margin-bottom:28px; }
+  .screen > .label { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin:-4px 0 12px; }
+  .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  .btn { border:1px solid var(--line); background:#fff; padding:8px 14px; border-radius:6px; cursor:pointer; font:inherit; }
+  .btn.primary { background:var(--accent); color:#fff; border-color:var(--accent); } .btn.danger { color:var(--danger); border-color:var(--danger); }
+  .btn.ok { background:var(--ok); color:#fff; border-color:var(--ok); } .btn.warn { color:var(--warn); border-color:var(--warn); }
+  table { width:100%; border-collapse:collapse; } th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); font-size:14px; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; font-weight:600; }
+  .b-draft { background:#f3f4f6; color:#374151; } .b-open { background:#dcfce7; color:#166534; } .b-closed { background:#fee2e2; color:#991b1b; }
+  label { display:block; font-size:13px; color:var(--muted); margin:10px 0 4px; } input, textarea { width:100%; padding:8px; border:1px solid var(--line); border-radius:6px; font:inherit; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; } @media (max-width:640px){ .grid2 { grid-template-columns:1fr; } }
+  .hint { font-size:13px; color:var(--muted); } .link { background:var(--bg); border:1px dashed var(--line); padding:8px 10px; border-radius:6px; font-family:monospace; font-size:13px; word-break:break-all; }
+  .error { color:var(--danger); font-size:13px; }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="brand">Inscriptions-club</span>
+  <nav><a class="active" href="#">Activités</a><a href="#">E-mails</a></nav>
+  <span class="user">Marie Dupont · <a href="#">Se déconnecter</a></span>
+</header>
+
+<main>
+
+<!-- ÉCRAN 0 : /login -->
+<section class="screen" style="max-width:420px">
+  <div class="label">Écran /login</div>
+  <h2>Connexion responsable</h2>
+  <label>E-mail</label><input type="email" value="marie@club.fr">
+  <label>Mot de passe</label><input type="password" value="••••••••">
+  <p class="error">E-mail ou mot de passe incorrect.</p>
+  <button class="btn primary">Se connecter</button>
+  <p class="hint">Pas de création de compte en ligne : demandez un accès au bureau du club.</p>
+</section>
+
+<!-- ÉCRAN 1 : /activities -->
+<section class="screen">
+  <div class="label">Écran /activities (défaut après connexion)</div>
+  <div class="row" style="justify-content:space-between">
+    <h1 style="margin:0">Activités</h1>
+    <div class="row"><select class="btn"><option>Toutes</option><option>Brouillons</option><option>Ouvertes</option><option>Fermées</option></select>
+    <button class="btn primary">+ Nouvelle activité</button></div>
+  </div>
+  <table>
+    <thead><tr><th>Activité</th><th>Date</th><th>Lieu</th><th>Inscrits</th><th>Statut</th></tr></thead>
+    <tbody>
+      <tr><td><a href="#">Stage judo Toussaint</a></td><td>28/10/2026 14:00</td><td>Dojo municipal</td><td>12 / 20</td><td><span class="badge b-open">Ouverte</span></td></tr>
+      <tr><td><a href="#">Sortie tournoi régional</a></td><td>15/11/2026 08:00</td><td>Gymnase Jean-Moulin</td><td>0 / 30</td><td><span class="badge b-draft">Brouillon</span></td></tr>
+      <tr><td><a href="#">Cours d'essai karaté</a></td><td>03/10/2026 18:00</td><td>Dojo municipal</td><td>8 / illimité</td><td><span class="badge b-closed">Fermée</span></td></tr>
+    </tbody>
+  </table>
+  <p class="hint" style="margin-top:12px">Liste vide : « Aucune activité pour l'instant. Créez la première ! »</p>
+</section>
+
+<!-- ÉCRAN 2 : /activities/new (identique en édition dans le détail) -->
+<section class="screen" style="max-width:640px">
+  <div class="label">Écran /activities/new — formulaire (réutilisé en édition)</div>
+  <h2>Nouvelle activité</h2>
+  <label>Titre *</label><input value="Stage judo Toussaint">
+  <div class="grid2">
+    <div><label>Date et heure *</label><input type="datetime-local" value="2026-10-28T14:00"></div>
+    <div><label>Places (vide = illimité)</label><input type="number" value="20" min="1"></div>
+  </div>
+  <label>Lieu *</label><input value="Dojo municipal">
+  <label>Description</label><textarea rows="3">Apporter kimono et gourde. Goûter offert.</textarea>
+  <div class="row" style="margin-top:14px"><button class="btn primary">Enregistrer (brouillon)</button><button class="btn">Annuler</button></div>
+  <p class="hint">Une activité créée est en brouillon : elle n'est pas visible par les participants tant qu'elle n'est pas ouverte.</p>
+</section>
+
+<!-- ÉCRAN 3 : /activities/:id -->
+<section class="screen">
+  <div class="label">Écran /activities/:id — détail</div>
+  <div class="row" style="justify-content:space-between">
+    <h1 style="margin:0">Stage judo Toussaint <span class="badge b-open">Ouverte</span></h1>
+    <div class="row"><button class="btn">Modifier</button><button class="btn warn">Fermer les inscriptions</button></div>
+  </div>
+  <p class="hint">28/10/2026 14:00 · Dojo municipal · 20 places · créée par Marie Dupont</p>
+  <p>Apporter kimono et gourde. Goûter offert.</p>
+
+  <h2>Lien d'inscription à partager</h2>
+  <div class="row"><div class="link" style="flex:1">https://club.example.org/a/k3Jd92xQpL1z</div><button class="btn">Copier</button></div>
+  <p class="hint">Variantes du bouton d'état : brouillon → <button class="btn ok">Ouvrir aux inscriptions</button> ; fermée → <button class="btn ok">Rouvrir</button> ; brouillon ou 0 inscrit → <button class="btn danger">Supprimer</button></p>
+
+  <h2>Inscrits — 12 / 20 (8 places restantes)</h2>
+  <table>
+    <thead><tr><th>Participant</th><th>Contact</th><th>E-mail</th><th>Inscrit le</th></tr></thead>
+    <tbody>
+      <tr><td>Léo Martin <span class="badge b-draft">mineur</span></td><td>Sophie Martin (parent)</td><td>sophie.martin@mail.fr</td><td>12/10/2026</td></tr>
+      <tr><td>Karim Benali</td><td>—</td><td>k.benali@mail.fr</td><td>13/10/2026</td></tr>
+    </tbody>
+  </table>
+  <p class="hint">Liste vide : « Personne n'est encore inscrit. Partagez le lien ci-dessus. »</p>
+</section>
+
+</main>
+</body>
+</html>
