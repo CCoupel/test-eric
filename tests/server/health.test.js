@@ -34,3 +34,23 @@ describe.skipIf(!url)('GET /health — intégration PostgreSQL', () => {
     expect(m.rows.map((r) => r.name)).toContain('001_init.sql');
   });
 });
+
+describe('en-têtes helmet selon le protocole', () => {
+  const pool = { query: async () => ({}) };
+  const headers = async (baseUrl) => {
+    const config = loadConfig({ DATABASE_URL: 'postgres://x@localhost/x', NODE_ENV: 'test', APP_BASE_URL: baseUrl });
+    return (await request(createApp({ config, pool })).get('/health')).headers;
+  };
+
+  it('http : ni HSTS ni upgrade-insecure-requests', async () => {
+    const h = await headers('http://localhost:3000');
+    expect(h['strict-transport-security']).toBeUndefined();
+    expect(h['content-security-policy']).not.toContain('upgrade-insecure-requests');
+  });
+
+  it('https : HSTS et upgrade-insecure-requests actifs', async () => {
+    const h = await headers('https://club.example');
+    expect(h['strict-transport-security']).toBeDefined();
+    expect(h['content-security-policy']).toContain('upgrade-insecure-requests');
+  });
+});

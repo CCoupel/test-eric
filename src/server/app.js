@@ -24,7 +24,14 @@ export function createApp({ config = loadConfig(), pool = createPool(config), lo
   const app = express();
   app.locals.pool = pool;
   app.disable('x-powered-by');
-  app.use(helmet());
+  // Hors HTTPS (ex. QUALIF http://localhost) : ni HSTS ni upgrade-insecure-requests, sinon le navigateur casse les assets.
+  app.use(
+    helmet(
+      config.https
+        ? {}
+        : { strictTransportSecurity: false, contentSecurityPolicy: { directives: { 'upgrade-insecure-requests': null } } },
+    ),
+  );
   app.use(pinoHttp({ logger: log, redact: REDACT_PATHS, autoLogging: { ignore: (req) => req.url === '/health' } }));
   app.use(express.json({ limit: '100kb' }));
 

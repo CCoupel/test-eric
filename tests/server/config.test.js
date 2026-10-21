@@ -12,6 +12,10 @@ describe('loadConfig', () => {
     const c = loadConfig({ ...base, APP_PORT: '8080', APP_BASE_URL: 'https://club.example/', NODE_ENV: 'production' });
     expect(c).toMatchObject({ port: 8080, baseUrl: 'https://club.example', isProduction: true });
   });
+  it('déduit https de APP_BASE_URL', () => {
+    expect(loadConfig(base).https).toBe(false);
+    expect(loadConfig({ ...base, APP_BASE_URL: 'https://club.example' }).https).toBe(true);
+  });
   it('exige DATABASE_URL', () => {
     expect(() => loadConfig({})).toThrow(ConfigError);
   });

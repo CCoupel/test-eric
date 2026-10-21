@@ -43,6 +43,8 @@ export function loadConfig(env = process.env) {
     isProduction: nodeEnv === 'production',
     port,
     baseUrl: baseUrl.replace(/\/+$/, ''),
+    // HTTPS déduit de APP_BASE_URL : conditionne HSTS et upgrade-insecure-requests (QUALIF en http://localhost).
+    https: new URL(baseUrl).protocol === 'https:',
     databaseUrl,
     consentTextVersion: str('CONSENT_TEXT_VERSION', '2026-10'),
   };
