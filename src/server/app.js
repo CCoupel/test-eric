@@ -4,6 +4,10 @@ import { fileURLToPath } from 'node:url';
 import express from 'express';
 import helmet from 'helmet';
 import { loadConfig } from './config.js';
+import { HttpError } from './errors.js';
+import { checkOrigin } from './middleware/session.js';
+import { activityRoutes } from './routes/activities.js';
+import { authRoutes } from './routes/auth.js';
 import { createPool } from './db/pool.js';
 import pino from 'pino';
 import pinoHttp from 'pino-http';
@@ -16,10 +20,12 @@ export const REDACT_PATHS = [
   'req.headers.authorization',
   'res.headers["set-cookie"]',
   'req.body.password',
+  'req.body.email',
+  'req.body.contact_email',
 ];
 
 // Sans argument : config lue dans l'environnement (DATABASE_URL…) et pool créé ; `app.locals.pool` permet de le fermer.
-export function createApp({ config = loadConfig(), pool = createPool(config), logger, webDir: webDirOpt = join(here, '../../dist/web') } = {}) {
+export function createApp({ config = loadConfig(), pool = createPool(config), logger, loginLimit, webDir: webDirOpt = join(here, '../../dist/web') } = {}) {
   const webDir = resolve(webDirOpt); // absolu ; sendFile avec `root` évite le rejet des chemins contenant un segment « .xxx » (ex. .claude/worktrees)
   const log = logger ?? pino({ level: config.nodeEnv === 'test' ? 'silent' : 'info', redact: REDACT_PATHS });
   const app = express();
@@ -35,6 +41,10 @@ export function createApp({ config = loadConfig(), pool = createPool(config), lo
   );
   app.use(pinoHttp({ logger: log, redact: REDACT_PATHS, autoLogging: { ignore: (req) => req.url === '/health' } }));
   app.use(express.json({ limit: '100kb' }));
+
+  app.use('/api', checkOrigin(config));
+  app.use('/api/auth', authRoutes({ config, pool, loginLimit }));
+  app.use('/api/activities', activityRoutes({ config, pool }));
 
   app.get('/health', async (_req, res) => {
     try {
@@ -56,6 +66,9 @@ export function createApp({ config = loadConfig(), pool = createPool(config), lo
 
   // eslint-disable-next-line no-unused-vars
   app.use((err, req, res, _next) => {
+    if (err instanceof HttpError) {
+      return res.status(err.status).json({ error: err.code, message: err.message, ...(err.details && { details: err.details }) });
+    }
     if (err.type === 'entity.parse.failed' || err.status === 400) {
       return res.status(400).json({ error: 'validation_error', message: 'Corps de requête invalide' });
     }

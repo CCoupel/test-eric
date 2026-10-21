@@ -3,17 +3,25 @@ import { createApp } from './app.js';
 import { loadConfig } from './config.js';
 import { createPool } from './db/pool.js';
 import { runMigrations } from './db/migrate.js';
+import { seedAdmin } from './services/auth.js';
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
 /** Applique les migrations puis écoute ; retourne `{ server, pool, stop }` (stop = arrêt propre). */
 export async function start(config = loadConfig(), log = console) {
   const pool = createPool(config, log);
-  const applied = await runMigrations(pool);
-  if (applied.length) log.log(`Migrations appliquées : ${applied.join(', ')}`);
+  let server;
+  try {
+    const applied = await runMigrations(pool);
+    if (applied.length) log.log(`Migrations appliquées : ${applied.join(', ')}`);
+    await seedAdmin(pool, config, log);
 
-  const server = createApp({ config, pool }).listen(config.port);
-  await new Promise((resolve, reject) => server.once('listening', resolve).once('error', reject));
+    server = createApp({ config, pool }).listen(config.port);
+    await new Promise((resolve, reject) => server.once('listening', resolve).once('error', reject));
+  } catch (err) {
+    await pool.end().catch(() => {});
+    throw err;
+  }
 
   const stop = () =>
     new Promise((resolve) => {
