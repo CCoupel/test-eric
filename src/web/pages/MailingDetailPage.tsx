@@ -17,6 +17,7 @@ const ERROR_LABELS: Record<string, string> = {
   connection: 'connexion impossible',
   auth: 'authentification refusée',
   rejected: 'adresse refusée',
+  interrupted: 'envoi interrompu (serveur de messagerie indisponible)',
   other: 'erreur',
 };
 

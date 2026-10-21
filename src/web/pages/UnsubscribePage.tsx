@@ -27,6 +27,7 @@ export function UnsubscribePage() {
       .catch((err: unknown) => {
         if (!active) return;
         setState(err instanceof ApiError && err.status === 404 ? 'notfound' : 'error');
+        if (err instanceof ApiError && err.status === 429) setError('Trop de requêtes. Réessayez dans un moment.');
       });
     return () => {
       active = false;
@@ -44,6 +45,8 @@ export function UnsubscribePage() {
       if (err instanceof ApiError && err.status === 404) {
         setInfo(null);
         setState('notfound');
+      } else if (err instanceof ApiError && err.status === 429) {
+        setError('Trop de requêtes. Réessayez dans un moment.');
       } else {
         setError('La désinscription a échoué. Réessayez.');
       }
@@ -56,7 +59,7 @@ export function UnsubscribePage() {
     <PublicLayout>
       <section className="screen">
         {state === 'loading' && <p>Chargement…</p>}
-        {state === 'error' && <p className="error" role="alert">Impossible de charger cette page. Réessayez plus tard.</p>}
+        {state === 'error' && <p className="error" role="alert">{error ?? 'Impossible de charger cette page. Réessayez plus tard.'}</p>}
         {state === 'notfound' && (
           <>
             <h1 data-testid="unsubscribe-not-found">Lien introuvable</h1>

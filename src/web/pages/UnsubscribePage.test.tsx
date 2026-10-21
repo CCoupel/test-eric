@@ -45,4 +45,15 @@ describe('UnsubscribePage', () => {
     await userEvent.click(await screen.findByTestId('unsubscribe-confirm'));
     expect(await screen.findByTestId('unsubscribe-not-found')).toBeInTheDocument();
   });
+
+  it('429 au POST : message dédié, bouton réutilisable', async () => {
+    mockFetch([
+      { path: `/api/public/unsubscribe/${TOKEN}`, body: { activities: [{ title: 'Stage', starts_at: '2026-12-28T13:00:00.000Z' }] } },
+      { method: 'POST', path: `/api/public/unsubscribe/${TOKEN}`, status: 429, body: { error: 'rate_limited', message: 'x' } },
+    ]);
+    renderU();
+    await userEvent.click(await screen.findByTestId('unsubscribe-confirm'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Trop de requêtes');
+    expect(screen.getByTestId('unsubscribe-confirm')).toBeEnabled();
+  });
 });
