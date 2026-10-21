@@ -93,7 +93,9 @@ Variables principales :
 
 Le serveur **refuse de démarrer** si une de ces règles n'est pas respectée. Les valeurs d'exemple sont refusées.
 
-Les variables `SMTP_*` et `MAIL_FROM` sont prévues pour l'envoi des e-mails groupés (prochain lot).
+Les variables `SMTP_*` et `MAIL_FROM` configurent l'envoi des e-mails groupés. Sans `SMTP_HOST`, le serveur reste en mode **stub** :
+aucun e-mail n'est envoyé. Configuration, exemples de fournisseurs, délivrabilité (SPF, DKIM, DMARC) et dépannage :
+voir [`docs/EMAIL.md`](docs/EMAIL.md).
 
 ## Comptes responsables
 
