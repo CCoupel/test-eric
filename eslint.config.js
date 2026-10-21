@@ -4,7 +4,10 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 
 export default [
-  { ignores: ['dist/', 'coverage/', 'node_modules/', '_work/', 'MARKETING/', 'TEMPLATE_claude/'] },
+  { ignores: [
+      'dist/', 'build/', 'coverage/', 'test-results/', 'playwright-report/', 'node_modules/', '.claude/',
+      '_work/', 'MARKETING/', 'TEMPLATE_claude/',
+    ] },
   js.configs.recommended,
   { files: ['**/*.js'], languageOptions: { ecmaVersion: 2023, sourceType: 'module', globals: globals.node } },
   // Frontend : TypeScript + React (src/web)
