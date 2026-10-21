@@ -46,6 +46,8 @@ export const activitiesApi = {
   open: (id: string) => api<{ activity: Activity }>('POST', `/api/activities/${id}/open`).then((r) => r.activity),
   close: (id: string) => api<{ activity: Activity }>('POST', `/api/activities/${id}/close`).then((r) => r.activity),
   remove: (id: string) => api('DELETE', `/api/activities/${id}`),
+  removeRegistration: (id: string, registrationId: string) =>
+    api('DELETE', `/api/activities/${id}/registrations/${registrationId}`),
   registrations: (id: string) =>
     api<{ registrations: Registration[]; count: number; capacity: number | null; remaining_places: number | null }>(
       'GET',

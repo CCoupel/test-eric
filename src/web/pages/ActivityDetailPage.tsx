@@ -4,7 +4,8 @@ import { activitiesApi, type Activity, type Registration } from '../api/activiti
 import { ApiError } from '../api/client';
 import { ActivityForm } from '../components/ActivityForm';
 import { StatusBadge } from '../components/StatusBadge';
-import { formatDate, formatDateTime } from '../components/format';
+import { RegistrationsTable } from '../components/RegistrationsTable';
+import { formatDateTime } from '../components/format';
 
 export function ActivityDetailPage() {
   const { id = '' } = useParams();
@@ -52,6 +53,14 @@ export function ActivityDetailPage() {
     } catch (err) {
       setError(err instanceof ApiError && err.subCode === 'has_registrations' ? 'Suppression impossible : des personnes sont inscrites.' : err instanceof Error ? err.message : 'Erreur');
     }
+  }
+
+  async function onRemoveRegistration(registrationId: string) {
+    if (!activity) return;
+    await activitiesApi.removeRegistration(activity.id, registrationId);
+    const [a, r] = await Promise.all([activitiesApi.get(activity.id), activitiesApi.registrations(activity.id)]);
+    setActivity(a);
+    setRegistrations(r.registrations);
   }
 
   async function onCopy() {
@@ -131,25 +140,7 @@ export function ActivityDetailPage() {
         Inscrits — {activity.registrations_count}
         {activity.capacity != null ? ` / ${activity.capacity} (${activity.remaining_places ?? 0} places restantes)` : ''}
       </h2>
-      {registrations.length === 0 ? (
-        <p className="hint" data-testid="registrations-empty">Personne n’est encore inscrit. Partagez le lien ci-dessus.</p>
-      ) : (
-        <table>
-          <thead>
-            <tr><th>Participant</th><th>Contact</th><th>E-mail</th><th>Inscrit le</th></tr>
-          </thead>
-          <tbody>
-            {registrations.map((r) => (
-              <tr key={r.id}>
-                <td>{r.participant_name} {r.is_minor && <span className="badge b-draft">mineur</span>}</td>
-                <td>{r.is_minor ? `${r.contact_name} (parent)` : '—'}</td>
-                <td>{r.contact_email}</td>
-                <td>{formatDate(r.created_at)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <RegistrationsTable registrations={registrations} onRemove={onRemoveRegistration} />
     </section>
   );
 }
