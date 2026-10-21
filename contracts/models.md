@@ -23,6 +23,7 @@
 | password_hash | text | not null | bcrypt (coût 12) |
 | name | text | not null | affiché dans l'historique des envois |
 | role | text | not null, `admin` \| `manager` | v1 : mêmes droits ; `admin` réservé à l'évolution |
+| token_version | integer | not null default 0 | révocation de session : le JWT porte `tv` ; incrémenté au logout (toutes les sessions du compte) |
 | created_at | timestamptz | not null default now() | |
 
 - Pas d'inscription publique : un compte initial est créé au démarrage par **seed** depuis `ADMIN_EMAIL` /
@@ -119,10 +120,11 @@ Champs calculés (jamais stockés) : `registrations_count` (inscriptions actives
 |----------|-------------|------------|-------|
 | `NODE_ENV` | non | `development` | |
 | `APP_PORT` | non | `3000` | port HTTP |
-| `APP_BASE_URL` | oui | `http://localhost:3000` | construction des liens publics |
+| `APP_BASE_URL` | oui | `http://localhost:3000` | construction des liens publics ; **origine du navigateur** : seule `Origin` autorisée sur les mutations, et `Secure` du cookie si `https://` (en dev avec Vite : `http://localhost:5173`) |
+| `TRUST_PROXY` | non | vide (aucun) | nombre de reverse proxys de confiance (ex. `1`) ou liste IP/CIDR ; `true` refusé. Requis pour que le rate-limit par IP voie l'IP réelle derrière un proxy |
 | `DATABASE_URL` | oui | — | `postgres://user:pass@host:5432/db` |
-| `SESSION_SECRET` | oui | — | ≥ 32 car. |
-| `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` | oui (1er démarrage) | — | seed du compte initial |
+| `SESSION_SECRET` | oui | — | ≥ 32 car., ≥ 10 caractères distincts (démarrage refusé sinon) |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` | oui (1er démarrage) | — | seed du compte initial ; mot de passe ≥ 12 car., valeurs triviales/d'exemple refusées (démarrage refusé) |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` / `SMTP_USER` / `SMTP_PASS` | non | vide → stub | Nodemailer |
 | `MAIL_FROM` | si SMTP | — | `Club <no-reply@domaine>` |
 | `CONSENT_TEXT_VERSION` | non | `2026-10` | version du texte RGPD |

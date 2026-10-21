@@ -2,6 +2,16 @@
 
 > Changements de contrats (API, schemas) : `BREAKING` | `CHANGED` | `ADDED`. Lu par le CDP au GATE 2.
 
+## [20261021b] — Durcissement auth (issue #5, audit security)
+
+- **[ADDED]** `users.token_version` — révocation de session (claim JWT `tv`, incrémenté au logout)
+- **[ADDED]** variable `TRUST_PROXY` — IP réelle pour le rate-limit derrière un reverse proxy
+- **[CHANGED]** `POST /api/auth/login` — second limiteur par e-mail normalisé : 5 échecs / 15 min → `429 rate_limited`
+- **[CHANGED]** mutations `/api/*` — `Origin` obligatoire quand le cookie `sid` est présent et égale à `APP_BASE_URL` (sinon `403 forbidden`) ;
+  `Sec-Fetch-Site: cross-site` refusé. Couvre aussi `/api/public/*`.
+- **[CHANGED]** démarrage — refus de `SESSION_SECRET` peu varié et de `ADMIN_PASSWORD` trivial/d'exemple
+- **[ADDED]** `Cache-Control: no-store` sur toutes les réponses `/api`
+
 ## [20261021] — Milestone v0.1.0 (issues #5, #6, #7)
 
 Aucun contrat préexistant : aucun changement BREAKING.
