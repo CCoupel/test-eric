@@ -226,8 +226,21 @@ function RegistrationForm({
 
       {/* Honeypot : invisible et hors navigation clavier ; un humain le laisse vide. */}
       <div className="hp" aria-hidden="true">
-        <label htmlFor="reg-website">Site web</label>
-        <input id="reg-website" name="website" tabIndex={-1} autoComplete="off" value={website} onChange={(e) => setWebsite(e.target.value)} />
+        {/* Ni `name` ni libellé « site web » : les navigateurs et gestionnaires de mots de passe remplissent ces champs
+            automatiquement, ce qui déclencherait le honeypot et ferait ignorer l'inscription d'un vrai utilisateur. */}
+        <label htmlFor="reg-hp">Ne pas remplir ce champ</label>
+        <input
+          id="reg-hp"
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+          data-lpignore="true"
+          data-1p-ignore="true"
+          data-form-type="other"
+          data-testid="register-honeypot"
+          value={website}
+          onChange={(e) => setWebsite(e.target.value)}
+        />
       </div>
 
       <div className="consent">

@@ -58,6 +58,16 @@ describe('PublicActivityPage', () => {
     expect(screen.queryByTestId('register-contact-name')).toBeNull();
   });
 
+  it('honeypot : sans attribut name ni libellé « site web » (anti-autofill), vide par défaut', async () => {
+    mockFetch([{ path: '/api/public/activities/abc', body: PUBLIC }]);
+    renderPublic();
+    const hp = await screen.findByTestId('register-honeypot');
+    expect(hp).not.toHaveAttribute('name');
+    expect(hp).toHaveValue('');
+    expect(hp).toHaveAttribute('tabindex', '-1');
+    expect(screen.queryByText(/site web/i)).toBeNull();
+  });
+
   it('refuse sans consentement et n’appelle pas l’API', async () => {
     const f = mockFetch([{ path: '/api/public/activities/abc', body: PUBLIC }]);
     renderPublic();
