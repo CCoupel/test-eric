@@ -8,3 +8,5 @@
 
 | Chemin | Niveau | Composant | Feature | Statut | Tags |
 |--------|--------|-----------|---------|--------|------|
+| e2e/socle/smoke/ | e2e | frontend | Smoke : accueil + /health | feature | smoke |
+| tests/integration/socle/health/ | integration | backend | GET /health (DB up 200 / DB down 503) | feature | smoke |
