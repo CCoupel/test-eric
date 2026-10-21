@@ -10,3 +10,7 @@
 |--------|--------|-----------|---------|--------|------|
 | e2e/socle/smoke/ | e2e | frontend | Smoke : accueil + /health | feature | smoke |
 | tests/integration/socle/health/ | integration | backend | GET /health (DB up 200 / DB down 503) | feature | smoke |
+| tests/integration/auth/login/ | integration | backend | Auth : login/me/logout, validation, rate-limit, securite (scope security) | feature | critical |
+| tests/integration/activities/crud/ | integration | backend | Activites : creation, lecture, liste/filtre, modification, suppression | feature | |
+| tests/integration/activities/etats/ | integration | backend | Activites : transitions d'etat, liste des inscrits | feature | |
+| e2e/activites/creation/ | e2e | frontend | Connexion, creation et ouverture d'une activite, lien public | feature | critical |
