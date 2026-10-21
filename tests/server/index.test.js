@@ -33,6 +33,7 @@ describe.skipIf(!url)('start() — démarrage / arrêt', () => {
     const warn2 = vi.fn();
     const b = await start(loadConfig({ ...prod, TRUST_PROXY: '1' }), { log: vi.fn(), warn: warn2, error: vi.fn() });
     await b.stop();
-    expect(warn2).not.toHaveBeenCalled();
+    expect(warn2).not.toHaveBeenCalledWith(expect.stringContaining('TRUST_PROXY'));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('SMTP non configuré')); // production sans SMTP : avertissement explicite
   });
 });
