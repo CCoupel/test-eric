@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from '../../src/server/app.js';
 import { runUserCreate } from '../../src/server/cli/user-create.js';
 import { loadConfig } from '../../src/server/config.js';
-import { checkOrigin, parseCookies } from '../../src/server/middleware/session.js';
+import { allowedOrigins, checkOrigin, parseCookies } from '../../src/server/middleware/session.js';
 import { authenticate, seedAdmin, signSession, verifySession } from '../../src/server/services/auth.js';
 
 const url = process.env.DATABASE_URL;
@@ -145,5 +145,30 @@ describe('RATE_LIMIT_LOGIN_PER_IP_MIN', () => {
     const app = createApp({ config, pool });
     for (let i = 1; i <= 10; i++) expect((await attempt(app, i)).status).toBe(401);
     expect((await attempt(app, 11)).status).toBe(429);
+  });
+});
+
+describe('allowedOrigins — alias loopback', () => {
+  const origins = (url) => [...allowedOrigins(url)].sort();
+  const check = (baseUrl, origin) => {
+    let err;
+    checkOrigin({ baseUrl })({ method: 'POST', headers: { origin, 'sec-fetch-site': 'same-origin' } }, null, (e) => { err = e; });
+    return err;
+  };
+
+  it('APP_BASE_URL en localhost : 127.0.0.1 et [::1] de même protocole et port acceptés (cas QUALIF 127.0.0.1:8080)', () => {
+    expect(origins('http://localhost:8080')).toEqual(['http://127.0.0.1:8080', 'http://[::1]:8080', 'http://localhost:8080']);
+    expect(check('http://localhost:8080', 'http://127.0.0.1:8080')).toBeUndefined();
+    expect(check('http://127.0.0.1:8080', 'http://localhost:8080')).toBeUndefined();
+  });
+  it('refus : autre port, autre protocole, autre hôte, sous-domaine piège', () => {
+    for (const o of ['http://127.0.0.1:9999', 'https://127.0.0.1:8080', 'http://localhost', 'http://evil.example:8080', 'http://localhost.evil.example:8080', 'http://127.0.0.1.evil.example:8080']) {
+      expect(() => check('http://localhost:8080', o), o).toThrow(/Origine refusée/);
+    }
+  });
+  it('APP_BASE_URL publique : aucun alias loopback toléré', () => {
+    expect(origins('https://club.example')).toEqual(['https://club.example']);
+    expect(() => check('https://club.example', 'http://127.0.0.1:443')).toThrow(/Origine refusée/);
+    expect(() => check('https://club.example', 'https://127.0.0.1')).toThrow(/Origine refusée/);
   });
 });

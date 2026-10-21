@@ -31,21 +31,37 @@ export const requireSession = (config, pool) => async (req, _res, next) => {
 
 const SAFE = new Set(['GET', 'HEAD', 'OPTIONS']);
 
+const LOOPBACK_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
+
+/**
+ * Origines acceptées : celle de APP_BASE_URL ; si elle est en loopback (poste de dev, QUALIF locale), ses alias loopback
+ * (localhost / 127.0.0.1 / [::1]) avec le MÊME protocole et le MÊME port — un navigateur ouvert sur http://127.0.0.1:8080
+ * envoie cette Origin même si APP_BASE_URL vaut http://localhost:8080. Sans effet pour une URL publique.
+ */
+export function allowedOrigins(baseUrl) {
+  const u = new URL(baseUrl);
+  const set = new Set([u.origin]);
+  if (LOOPBACK_HOSTS.includes(u.hostname)) {
+    for (const h of LOOPBACK_HOSTS) set.add(`${u.protocol}//${h}${u.port ? `:${u.port}` : ''}`);
+  }
+  return set;
+}
+
 /**
  * CSRF sur les méthodes non sûres :
- *  - `Origin` présent → doit être exactement celui de APP_BASE_URL (en dev, APP_BASE_URL = origine visible du navigateur) ;
+ *  - `Origin` présent → doit être celui de APP_BASE_URL (ou un alias loopback de même port si APP_BASE_URL est en loopback) (en dev, APP_BASE_URL = origine visible du navigateur) ;
  *  - `Origin` absent → refusé si la requête porte le cookie de session ;
  *  - `Sec-Fetch-Site: cross-site` → refusé.
  */
 export const checkOrigin = (config) => {
-  const allowed = new URL(config.baseUrl).origin;
+  const allowed = allowedOrigins(config.baseUrl);
   const forbidden = () => new HttpError(403, 'forbidden', 'Origine refusée');
   return (req, _res, next) => {
     if (SAFE.has(req.method)) return next();
     if (req.headers['sec-fetch-site'] === 'cross-site') throw forbidden();
     const origin = req.headers.origin;
     if (origin) {
-      if (origin !== allowed) throw forbidden();
+      if (!allowed.has(origin)) throw forbidden();
     } else if (parseCookies(req.headers.cookie)[COOKIE_NAME]) {
       throw forbidden();
     }
