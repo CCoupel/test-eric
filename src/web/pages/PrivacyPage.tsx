@@ -4,7 +4,7 @@ import { PublicLayout } from '../components/PublicLayout';
 
 export function PrivacyPage() {
   const [contact, setContact] = useState<string | null>(null);
-  const [months, setMonths] = useState(12);
+  const [months, setMonths] = useState<number | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -30,7 +30,11 @@ export function PrivacyPage() {
         <h2>Finalités</h2>
         <p>Ces informations servent uniquement à gérer votre inscription à l’activité du club et à vous contacter à son sujet. Elles ne sont ni vendues ni transmises à des tiers.</p>
         <h2>Conservation</h2>
-        <p>Vos données sont conservées jusqu’à <span data-testid="privacy-retention">{months} mois</span> après la date de l’activité, puis supprimées automatiquement.</p>
+        <p data-testid="privacy-retention">
+          {months != null
+            ? `Vos données sont conservées jusqu’à ${months} mois après la date de l’activité, puis supprimées automatiquement.`
+            : 'Vos données sont conservées pendant une durée limitée après la date de l’activité, puis supprimées automatiquement.'}
+        </p>
         <h2>Vos droits</h2>
         <p>
           Vous pouvez vous désinscrire et faire effacer vos données à tout moment grâce au lien de gestion affiché à la fin de votre inscription

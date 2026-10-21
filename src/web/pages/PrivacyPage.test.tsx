@@ -28,6 +28,6 @@ describe('PrivacyPage', () => {
     expect(await screen.findByRole('heading', { name: 'Politique de confidentialité' })).toBeInTheDocument();
     expect(screen.queryByTestId('privacy-contact')).toBeNull();
     expect(screen.getByText(/via votre responsable d’activité/)).toBeInTheDocument();
-    expect(screen.getByTestId('privacy-retention')).toHaveTextContent('12 mois');
+    expect(screen.getByTestId('privacy-retention')).toHaveTextContent('durée limitée');
   });
 });
