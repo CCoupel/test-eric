@@ -1,0 +1,6 @@
+# Liste blanche : l'image n'embarque que l'application construite et ses manifestes.
+# (Lu par docker build et podman build.)
+*
+!dist/
+!package.json
+!package-lock.json
