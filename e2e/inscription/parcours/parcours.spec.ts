@@ -24,6 +24,7 @@ test.describe('Inscription - parcours parent @critical', () => {
     await page.getByTestId('activity-form-capacity').fill(places);
     await page.getByTestId('activity-form-location').fill('Dojo municipal');
     await page.getByTestId('activity-form-submit').click();
+    await expect(page).toHaveURL(/\/activities\/[0-9a-f-]{36}$/);
     await page.getByTestId('activity-open-button').click();
     await expect(page.getByTestId('activity-status-badge')).toHaveText('Ouverte');
     const lien = (await page.getByTestId('activity-public-link').textContent()) ?? '';

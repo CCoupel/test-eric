@@ -76,6 +76,7 @@ test.describe('Inscription - retrait par le responsable', () => {
     await page.getByTestId('activity-form-starts-at').fill('2026-12-28T14:00');
     await page.getByTestId('activity-form-location').fill('Gymnase');
     await page.getByTestId('activity-form-submit').click();
+    await expect(page).toHaveURL(/\/activities\/[0-9a-f-]{36}$/);
     const urlDetail = new URL(page.url()).pathname;
     await page.getByTestId('activity-open-button').click();
     const lien = (await page.getByTestId('activity-public-link').textContent()) ?? '';
