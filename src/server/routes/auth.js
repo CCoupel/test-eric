@@ -11,7 +11,7 @@ const loginSchema = z.strictObject({
   password: z.string().min(1, 'mot de passe requis').refine((v) => Buffer.byteLength(v) <= MAX_BCRYPT_BYTES, '72 octets maximum'),
 });
 
-export function authRoutes({ config, pool, loginLimit = 10, loginEmailLimit = 5 }) {
+export function authRoutes({ config, pool, loginLimit = config.authLimits.loginPerIpPerMin, loginEmailLimit = 5 }) {
   const router = Router();
 
   // 10 tentatives / min / IP, comptées succès compris (contrat).

@@ -129,6 +129,7 @@ Champs calculés (jamais stockés) : `registrations_count` (inscriptions actives
 | `TRUST_PROXY` | non | vide (aucun) | nombre de reverse proxys de confiance (ex. `1`) ou liste IP/CIDR ; `true` refusé. Requis pour que le rate-limit par IP voie l'IP réelle derrière un proxy |
 | `CONTACT_EMAIL` | non | `ADMIN_EMAIL` | contact RGPD affiché sur la page de confidentialité (via `GET /api/public/info`) ; absent → `null` |
 | `RETENTION_MONTHS` | non | `12` | purge automatique des inscriptions N mois après `activities.starts_at` (1..120) ; exécutée au démarrage puis chaque jour (`npm run data:purge` pour un lancement manuel) |
+| `RATE_LIMIT_LOGIN_PER_IP_MIN` | non | `10` | tentatives de `POST /api/auth/login` par IP et par minute (contrat : 10) ; ne relever qu'en test/E2E. Le limiteur par e-mail (5 échecs / 15 min) n'est pas configurable |
 | `RATE_LIMIT_REGISTRATION_PER_IP_MIN` / `RATE_LIMIT_REGISTRATION_PER_ACTIVITY_10MIN` / `RATE_LIMIT_TOKEN_PER_IP_MIN` / `RATE_LIMIT_VIEW_PER_IP_MIN` | non | `20` / `10` / `30` / `60` | limites anti-abus de `/api/public/*` (POST inscription par IP/min ; par IP+activité/10 min ; GET/DELETE token par IP/min ; fiche publique par IP/min) |
 | `DATABASE_URL` | oui | — | `postgres://user:pass@host:5432/db` |
 | `SESSION_SECRET` | oui | — | ≥ 32 car., ≥ 10 caractères distincts (démarrage refusé sinon) |

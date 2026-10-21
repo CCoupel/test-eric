@@ -123,3 +123,27 @@ describe('en-têtes /api', () => {
     expect(res.headers['cache-control']).toBe('no-store');
   });
 });
+
+describe('RATE_LIMIT_LOGIN_PER_IP_MIN', () => {
+  const pool = { query: async () => ({ rows: [] }) };
+  const attempt = (app, i) => request(app).post('/api/auth/login').send({ email: `u${i}@club.fr`, password: 'x' });
+
+  it('défaut 10 ; valeur invalide refusée au démarrage', () => {
+    expect(config.authLimits.loginPerIpPerMin).toBe(10);
+    for (const bad of ['0', 'abc', '-3', '1.5']) {
+      expect(() => loadConfig({ DATABASE_URL: 'postgres://x@localhost/x', NODE_ENV: 'test', RATE_LIMIT_LOGIN_PER_IP_MIN: bad })).toThrow(/RATE_LIMIT_LOGIN_PER_IP_MIN/);
+    }
+  });
+  it('surcharge par l’environnement : 2 essais passent, le 3e est en 429', async () => {
+    const cfg = loadConfig({ DATABASE_URL: 'postgres://x@localhost/x', NODE_ENV: 'test', RATE_LIMIT_LOGIN_PER_IP_MIN: '2' });
+    const app = createApp({ config: cfg, pool });
+    expect((await attempt(app, 1)).status).toBe(401);
+    expect((await attempt(app, 2)).status).toBe(401);
+    expect((await attempt(app, 3)).status).toBe(429);
+  });
+  it('sans surcharge : 10 essais passent, le 11e est en 429', async () => {
+    const app = createApp({ config, pool });
+    for (let i = 1; i <= 10; i++) expect((await attempt(app, i)).status).toBe(401);
+    expect((await attempt(app, 11)).status).toBe(429);
+  });
+});

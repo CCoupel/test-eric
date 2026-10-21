@@ -9,6 +9,7 @@ const externalUrl = process.env.E2E_BASE_URL;
 if (!externalUrl) {
   process.env.SESSION_SECRET ??= 'e2e-only-session-secret-e2e-only-session-secret';
   process.env.ADMIN_EMAIL ??= 'e2e-admin@club.test';
+  process.env.RATE_LIMIT_LOGIN_PER_IP_MIN ??= '1000'; // la suite E2E enchaîne > 10 logins/min depuis la même IP
   process.env.ADMIN_PASSWORD ??= 'e2e-Sup3r-Secret-Pass-9';
 }
 

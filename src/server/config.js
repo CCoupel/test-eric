@@ -80,6 +80,8 @@ export function loadConfig(env = process.env) {
     viewPerIpPerMin: intVar('RATE_LIMIT_VIEW_PER_IP_MIN', 60),
   };
 
+  const authLimits = { loginPerIpPerMin: intVar('RATE_LIMIT_LOGIN_PER_IP_MIN', 10) }; // login : 10/min/IP (contrat), relevé uniquement pour l'E2E
+
   // TRUST_PROXY : nombre de sauts de proxy de confiance (ex. 1), ou liste d'IP/CIDR/alias Express. `true` est refusé (IP usurpable).
   const trustRaw = str('TRUST_PROXY', 'false');
   let trustProxy = false;
@@ -102,6 +104,7 @@ export function loadConfig(env = process.env) {
     contactEmail,
     retentionMonths,
     publicLimits,
+    authLimits,
     admin: admin.email ? admin : null,
     consentTextVersion: str('CONSENT_TEXT_VERSION', '2026-10'),
   };
