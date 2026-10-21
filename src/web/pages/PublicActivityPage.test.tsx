@@ -80,7 +80,7 @@ describe('PublicActivityPage', () => {
     expect(screen.getByTestId('register-manage-url')).toHaveTextContent(/\/r\/A{43}/);
     const post = f.mock.calls.find(([, init]) => init?.method === 'POST');
     expect(JSON.parse(String(post?.[1]?.body))).toEqual({
-      participant_name: 'Léo Martin', is_minor: true, contact_name: 'Sophie Martin', contact_email: 'sophie@mail.fr', consent: true,
+      participant_name: 'Léo Martin', is_minor: true, contact_name: 'Sophie Martin', contact_email: 'sophie@mail.fr', consent: true, website: '',
     });
   });
 
@@ -96,6 +96,7 @@ describe('PublicActivityPage', () => {
     await screen.findByTestId('register-confirmation');
     const post = f.mock.calls.find(([, init]) => init?.method === 'POST');
     expect(JSON.parse(String(post?.[1]?.body))).not.toHaveProperty('contact_name');
+    expect(JSON.parse(String(post?.[1]?.body)).website).toBe('');
   });
 
   it('affiche le doublon (409 already_registered)', async () => {

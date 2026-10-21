@@ -168,7 +168,7 @@ function RegistrationForm({ slug, consentText, onDone }: { slug: string; consent
       ...(minor && { contact_name: contact.trim() }),
       contact_email: email.trim(),
       consent: true,
-      ...(website && { website }),
+      website,
     };
     setBusy(true);
     try {

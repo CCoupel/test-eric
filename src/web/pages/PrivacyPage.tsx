@@ -1,6 +1,21 @@
+import { useEffect, useState } from 'react';
+import { publicApi } from '../api/public';
 import { PublicLayout } from '../components/PublicLayout';
 
 export function PrivacyPage() {
+  const [contact, setContact] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    publicApi
+      .info()
+      .then((i) => active && setContact(i.contact_email))
+      .catch(() => undefined); // repli : texte générique ci-dessous
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <PublicLayout>
       <section className="screen">
@@ -14,8 +29,14 @@ export function PrivacyPage() {
         <h2>Vos droits</h2>
         <p>
           Vous pouvez vous désinscrire et faire effacer vos données à tout moment grâce au lien de gestion affiché à la fin de votre inscription
-          (page « Mon inscription »). Pour toute autre demande (accès, rectification), contactez le bureau du club à l’adresse indiquée
-          par votre responsable d’activité.
+          (page « Mon inscription »). Pour toute autre demande (accès, rectification), contactez le bureau du club{' '}
+          {contact ? (
+            <>
+              à l’adresse <a href={`mailto:${contact}`} data-testid="privacy-contact">{contact}</a>.
+            </>
+          ) : (
+            <>via votre responsable d’activité.</>
+          )}
         </p>
         <h2>Mineurs</h2>
         <p>L’inscription d’un mineur est faite par son parent ou tuteur légal, qui en confirme la qualité lors de l’inscription.</p>

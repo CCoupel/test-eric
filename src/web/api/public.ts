@@ -26,10 +26,15 @@ export interface RegistrationInput {
   contact_name?: string;
   contact_email: string;
   consent: true;
-  website?: string;
+  website: string;
+}
+
+export interface PublicInfo {
+  contact_email: string | null;
 }
 
 export const publicApi = {
+  info: () => api<PublicInfo>('GET', '/api/public/info'),
   activity: (slug: string) =>
     api<{ activity: PublicActivity; consent_text: string; consent_version: string }>(
       'GET',
