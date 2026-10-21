@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
 import helmet from 'helmet';
@@ -19,7 +19,8 @@ export const REDACT_PATHS = [
 ];
 
 // Sans argument : config lue dans l'environnement (DATABASE_URL…) et pool créé ; `app.locals.pool` permet de le fermer.
-export function createApp({ config = loadConfig(), pool = createPool(config), logger, webDir = join(here, '../../dist/web') } = {}) {
+export function createApp({ config = loadConfig(), pool = createPool(config), logger, webDir: webDirOpt = join(here, '../../dist/web') } = {}) {
+  const webDir = resolve(webDirOpt); // sendFile exige un chemin absolu
   const log = logger ?? pino({ level: config.nodeEnv === 'test' ? 'silent' : 'info', redact: REDACT_PATHS });
   const app = express();
   app.locals.pool = pool;
@@ -48,7 +49,7 @@ export function createApp({ config = loadConfig(), pool = createPool(config), lo
   // Statique du front (dist/web) + fallback SPA hors /api et /health.
   if (existsSync(join(webDir, 'index.html'))) {
     app.use(express.static(webDir, { index: false }));
-    app.get(/^\/(?!api\/|health$).*/, (_req, res) => res.sendFile(join(webDir, 'index.html')));
+    app.get(/^\/(?!api(\/|$)|health\/?$).*/, (_req, res) => res.sendFile(join(webDir, 'index.html')));
   }
 
   app.use('/api', (_req, res) => res.status(404).json({ error: 'not_found', message: 'Route inconnue' }));
@@ -57,6 +58,10 @@ export function createApp({ config = loadConfig(), pool = createPool(config), lo
   app.use((err, req, res, _next) => {
     if (err.type === 'entity.parse.failed' || err.status === 400) {
       return res.status(400).json({ error: 'validation_error', message: 'Corps de requête invalide' });
+    }
+    if (err.status >= 400 && err.status < 500) {
+      const codes = { 401: 'unauthenticated', 403: 'forbidden', 404: 'not_found', 429: 'rate_limited' };
+      return res.status(err.status).json({ error: codes[err.status] ?? 'bad_request', message: err.expose ? err.message : 'Requête refusée' });
     }
     req.log.error({ err }, 'erreur non gérée');
     res.status(500).json({ error: 'internal_error', message: 'Erreur interne' });

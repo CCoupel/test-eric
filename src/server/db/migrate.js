@@ -27,7 +27,7 @@ export async function runMigrations(pool, dir = MIGRATIONS_DIR) {
         await client.query('INSERT INTO schema_migrations (name) VALUES ($1)', [file]);
         await client.query('COMMIT');
       } catch (err) {
-        await client.query('ROLLBACK');
+        await client.query('ROLLBACK').catch(() => {}); // ne pas masquer l'erreur d'origine
         throw new Error(`Migration ${file} en échec : ${err.message}`, { cause: err });
       }
       applied.push(file);
