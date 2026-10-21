@@ -3,7 +3,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import request from 'supertest';
 import {
-  hasDb, makeApp, closeApp, resetData, createUser, login, expectError, expectConflict, validActivity, insertRegistrations,
+  hasDb, makeApp, closeApp, resetData, createUser, login, expectError, expectConflict, validActivity, insertRegistrations, BASE_URL,
 } from '../../_support/harness.js';
 
 const UUID_INCONNU = '00000000-0000-4000-8000-000000000000';
@@ -11,7 +11,7 @@ const UUID_INCONNU = '00000000-0000-4000-8000-000000000000';
 describe.skipIf(!hasDb)('Activites - etats et inscrits', () => {
   let ctx;
   let cookie;
-  const api = (method, url) => request(ctx.app)[method](url).set('Cookie', cookie);
+  const api = (method, url) => request(ctx.app)[method](url).set('Cookie', cookie).set('Origin', BASE_URL);
   const create = async (over = {}) => (await api('post', '/api/activities').send(validActivity(over))).body.activity;
   const statusOf = async (id) => (await api('get', `/api/activities/${id}`)).body.activity.status;
 

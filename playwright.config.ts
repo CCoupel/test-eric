@@ -9,7 +9,7 @@ const externalUrl = process.env.E2E_BASE_URL;
 if (!externalUrl) {
   process.env.SESSION_SECRET ??= 'e2e-only-session-secret-e2e-only-session-secret';
   process.env.ADMIN_EMAIL ??= 'e2e-admin@club.test';
-  process.env.ADMIN_PASSWORD ??= 'e2e-admin-password-1';
+  process.env.ADMIN_PASSWORD ??= 'e2e-Sup3r-Secret-Pass-9';
 }
 
 export default defineConfig({

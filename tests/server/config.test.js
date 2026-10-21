@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ConfigError, loadConfig } from '../../src/server/config.js';
 
-const SECRET = 's'.repeat(32);
+const SECRET = 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6';
 const base = { DATABASE_URL: 'postgres://u:p@localhost:5432/db', SESSION_SECRET: SECRET };
 
 describe('loadConfig', () => {
@@ -42,12 +42,24 @@ describe('loadConfig', () => {
   it('compte admin initial : tout ou rien, e-mail valide, mot de passe ≥ 12', () => {
     expect(loadConfig(base).admin).toBeNull();
     expect(() => loadConfig({ ...base, ADMIN_EMAIL: 'a@b.fr' })).toThrow(/ensemble/);
-    expect(() => loadConfig({ ...base, ADMIN_EMAIL: 'pasunemail', ADMIN_PASSWORD: 'x'.repeat(12) })).toThrow(/ADMIN_EMAIL invalide/);
+    expect(() => loadConfig({ ...base, ADMIN_EMAIL: 'pasunemail', ADMIN_PASSWORD: 'Zx9-sel-unique' })).toThrow(/ADMIN_EMAIL invalide/);
     expect(() => loadConfig({ ...base, ADMIN_EMAIL: 'a@b.fr', ADMIN_PASSWORD: 'court' })).toThrow(/12 caractères/);
-    expect(loadConfig({ ...base, ADMIN_EMAIL: 'a@b.fr', ADMIN_PASSWORD: 'x'.repeat(12) }).admin).toEqual({
+    expect(loadConfig({ ...base, ADMIN_EMAIL: 'a@b.fr', ADMIN_PASSWORD: 'Zx9-sel-unique' }).admin).toEqual({
       email: 'a@b.fr',
-      password: 'x'.repeat(12),
+      password: 'Zx9-sel-unique',
       name: 'Administrateur',
     });
+  });
+  it('refuse un ADMIN_PASSWORD trivial ou d’exemple, et un SESSION_SECRET peu varié', () => {
+    for (const bad of ['Password123!!', 'ChangeMe-1234567', 'motdepasse-solide-1', 'admin-admin-admin']) {
+      expect(() => loadConfig({ ...base, ADMIN_EMAIL: 'a@b.fr', ADMIN_PASSWORD: bad }), bad).toThrow(/triviale/);
+    }
+    expect(() => loadConfig({ ...base, SESSION_SECRET: 'ab'.repeat(20) })).toThrow(/peu varié/);
+  });
+  it('TRUST_PROXY : false par défaut, nombre de sauts, liste d’adresses ; « true » refusé', () => {
+    expect(loadConfig(base).trustProxy).toBe(false);
+    expect(loadConfig({ ...base, TRUST_PROXY: '1' }).trustProxy).toBe(1);
+    expect(loadConfig({ ...base, TRUST_PROXY: 'loopback, 10.0.0.0/8' }).trustProxy).toBe('loopback, 10.0.0.0/8');
+    expect(() => loadConfig({ ...base, TRUST_PROXY: 'true' })).toThrow(/TRUST_PROXY/);
   });
 });

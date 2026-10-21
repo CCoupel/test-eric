@@ -1,7 +1,7 @@
 // Integration : authentification (contracts/http-endpoints.md, section Authentification).
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
-import { hasDb, makeApp, closeApp, resetData, createUser, sidCookie, login, expectError } from '../../_support/harness.js';
+import { hasDb, makeApp, closeApp, resetData, createUser, sidCookie, login, expectError, BASE_URL } from '../../_support/harness.js';
 
 const EMAIL = 'marie@club.fr';
 const PASSWORD = 'motdepasse-solide-1';
@@ -62,7 +62,7 @@ describe.skipIf(!hasDb)('Auth - login / me / logout', () => {
 
   describe('POST /api/auth/logout', () => {
     it('204 et le cookie sid est efface', async () => {
-      const res = await request(ctx.app).post('/api/auth/logout').set('Cookie', cookie);
+      const res = await request(ctx.app).post('/api/auth/logout').set('Cookie', cookie).set('Origin', BASE_URL);
       expect(res.status).toBe(204);
       const set = [].concat(res.headers['set-cookie'] ?? []).find((c) => c.startsWith('sid='));
       expect(set).toBeDefined();
