@@ -18,6 +18,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <span className="brand">Inscriptions-club</span>
         <nav>
           <NavLink to="/activities">Activités</NavLink>
+          <NavLink to="/mailings" data-testid="nav-mailings">E-mails</NavLink>
         </nav>
         <span className="user">
           {user?.name} ·{' '}
