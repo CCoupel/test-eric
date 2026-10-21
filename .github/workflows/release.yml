@@ -1,0 +1,43 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Version = tag (verification, aucune modification)
+        id: version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Tag non SemVer: $GITHUB_REF_NAME"; exit 1; }
+          PKG=$(node -p "require('./package.json').version")
+          [ "$PKG" = "$VERSION" ] || { echo "package.json ($PKG) != tag ($VERSION)"; exit 1; }
+          echo "value=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - run: scripts/ci.sh
+
+      - name: Livrable
+        run: |
+          V=${{ steps.version.outputs.value }}
+          tar -czf "inscriptions-club-$V.tar.gz" dist Dockerfile docker-compose.prod.yml package.json package-lock.json
+          sha256sum "inscriptions-club-$V.tar.gz" > "inscriptions-club-$V.tar.gz.sha256"
+
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          V=${{ steps.version.outputs.value }}
+          gh release create "$GITHUB_REF_NAME" "inscriptions-club-$V.tar.gz" "inscriptions-club-$V.tar.gz.sha256" \
+            --title "v$V" --generate-notes
