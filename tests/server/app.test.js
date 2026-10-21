@@ -1,10 +1,12 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import request from 'supertest';
 import { afterAll, describe, expect, it } from 'vitest';
 import { createApp } from '../../src/server/app.js';
 import { loadConfig } from '../../src/server/config.js';
 
+// La version est incrémentée par le BUILD (X.Y.Z.a) : toujours la lire dans package.json.
+const { version } = JSON.parse(readFileSync('package.json', 'utf-8'));
 const cfg = (extra = {}) => loadConfig({ DATABASE_URL: 'postgres://x@localhost/x', NODE_ENV: 'test', ...extra });
 const okPool = { query: async () => ({}) };
 const downPool = { query: async () => { throw new Error('down'); } };
@@ -19,12 +21,12 @@ describe('GET /health', () => {
   it('200 avec la version du contrat quand la base répond', async () => {
     const res = await request(createApp({ config: cfg(), pool: okPool })).get('/health');
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ status: 'ok', version: '0.1.0.0', db: 'ok' });
+    expect(res.body).toEqual({ status: 'ok', version, db: 'ok' });
   });
   it('503 avec db=error quand la base est injoignable, sans détail de connexion', async () => {
     const res = await request(createApp({ config: cfg(), pool: downPool })).get('/health');
     expect(res.status).toBe(503);
-    expect(res.body).toEqual({ status: 'error', version: '0.1.0.0', db: 'error' });
+    expect(res.body).toEqual({ status: 'error', version, db: 'error' });
   });
 });
 
