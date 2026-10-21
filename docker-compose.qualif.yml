@@ -4,8 +4,10 @@
 # .claude/agents/environments/deploy.qualif.md).
 #
 # Variables : fichier `.env` a cote de ce compose (genere au DEPLOY depuis .env +
-# .claude/agents/environments/qualif.env). Il sert a la fois a l'interpolation ${...} ci-dessous
-# et a l'environnement du conteneur app (env_file). DATABASE_URL est derivee de POSTGRES_*.
+# .claude/agents/environments/qualif.env, DATABASE_URL derivee de POSTGRES_*) et `db.env`
+# (POSTGRES_* seuls, pour le conteneur db). Les secrets
+# passent UNIQUEMENT par env_file (--env-file : seul le chemin apparait dans la sortie de
+# podman-compose) — jamais par `environment:`, dont les valeurs sont affichees en clair.
 # Images en nom complet (docker.io/...) : podman refuse les noms courts sans registre de recherche.
 name: inscriptions-club-qualif
 
@@ -13,10 +15,8 @@ services:
   db:
     image: docker.io/library/postgres:16-alpine
     restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-club}
-      POSTGRES_USER: ${POSTGRES_USER:-club}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD manquant (qualif.env)}
+    env_file:
+      - db.env        # POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD uniquement (genere au DEPLOY)
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -35,10 +35,9 @@ services:
       - db
     env_file:
       - .env
-    environment:
+    environment:      # valeurs non secretes uniquement
       NODE_ENV: production
       APP_PORT: ${APP_PORT:-3000}
-      DATABASE_URL: postgres://${POSTGRES_USER:-club}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-club}
     ports:
       - "${APP_PORT:-3000}:${APP_PORT:-3000}"
     healthcheck:
