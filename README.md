@@ -17,16 +17,41 @@ Le cadrage complet est dans [`docs/CADRAGE.md`](docs/CADRAGE.md).
 
 ## Stack
 
-- Backend : Node.js ≥ 22, Express 5
+- Backend : Node.js 22, Express 5
 - Frontend : React 19, Vite, TypeScript
 - Base de données : PostgreSQL 16
 - Tests : Vitest, Playwright, Supertest
 
 ## Prérequis
 
-- Node.js **22** ou plus récent
-- Docker Desktop, avec l'intégration WSL activée si vous travaillez sous WSL
-  (utilisé pour la base de test ; inutile si vous fournissez votre propre `DATABASE_URL`)
+- **Node.js 22** ou plus récent (`engines` : `>=22`).
+- **Conteneurs** :
+  - Runners GitHub CI : Docker (`docker compose`).
+  - Poste local WSL : **Podman + podman-compose** (rootless).
+    Installation : `sudo apt-get install -y podman podman-compose`.
+  - Les mêmes fichiers (`Dockerfile`, `docker-compose.*.yml`) servent aux deux moteurs.
+- **Playwright** (tests E2E), une seule fois sur le poste local :
+
+  ```bash
+  sudo npx playwright install-deps chromium
+  ```
+
+  En CI, les dépendances sont installées automatiquement (`--with-deps`).
+
+### Choix du moteur de conteneurs
+
+`scripts/container-env.sh` détecte le moteur : Docker s'il répond (`docker info`), sinon Podman.
+Il est à sourcer en bash : `source scripts/container-env.sh`. Il définit `CONTAINER_CLI` et `COMPOSE_CMD`
+et une fonction `compose`.
+
+Pour forcer le moteur, définir les variables avant de sourcer le script :
+
+```bash
+export CONTAINER_CLI=podman COMPOSE_CMD=podman-compose
+```
+
+Sous WSL, `podman-compose` est appelé directement : `podman compose` peut déléguer au binaire
+`docker-compose` de Docker Desktop, inutilisable avec Podman.
 
 ## Installation
 
@@ -54,8 +79,9 @@ Variables principales :
 | `APP_BASE_URL` | URL publique de l'application (obligatoire en production) |
 | `NODE_ENV` | Environnement d'exécution |
 | `CONSENT_TEXT_VERSION` | Version du texte de consentement RGPD |
+| `ALLOW_DB_RESET` | Tests uniquement : force le reset d'une base dont le nom ne finit pas par `_test` |
 
-Les autres variables du fichier `.env.example` (`SESSION_SECRET`, `ADMIN_*`, `SMTP_*`, `MAIL_FROM`)
+Les autres variables de `.env.example` (`SESSION_SECRET`, `ADMIN_*`, `SMTP_*`, `MAIL_FROM`)
 sont prévues pour les prochaines fonctionnalités.
 
 ## Lancer en développement
@@ -69,26 +95,50 @@ npm run dev:web      # front Vite ; proxifie `/api` et `/health` vers le port 30
 ## Base de données de test
 
 Le fichier [`docker-compose.test.yml`](docker-compose.test.yml) démarre un PostgreSQL 16 éphémère
-(données en mémoire, identifiants de test uniquement) sur le port `5433` :
+(données en mémoire, identifiants de test uniquement) sur le port `5433`.
+
+Démarrage manuel (sans `--wait`, non supporté par podman-compose) :
 
 ```bash
-docker compose -f docker-compose.test.yml up -d --wait db
+source scripts/container-env.sh
+compose -f docker-compose.test.yml up -d db
+# attendre que Postgres réponde (pg_isready) avant de lancer les tests
 export DATABASE_URL=postgres://club:club@localhost:5433/club_test
 ```
 
-Arrêt : `docker compose -f docker-compose.test.yml down -v`.
+Arrêt : `compose -f docker-compose.test.yml down -v`.
 
-`scripts/ci.sh` démarre et arrête cette base automatiquement lorsque `DATABASE_URL` n'est pas définie.
+Le plus simple reste de laisser `scripts/ci.sh` démarrer et arrêter cette base : il le fait lorsque
+`DATABASE_URL` n'est pas définie.
+
+### Node Windows dans WSL
+
+Si `node` est le binaire **Windows** (`node.exe`), il ne reçoit les variables WSL que listées dans `WSLENV`.
+Sans cela, `DATABASE_URL` est absente et les tests d'intégration sont ignorés silencieusement.
+
+`scripts/ci.sh` ajoute `DATABASE_URL:CI:NODE_ENV:APP_PORT:E2E_BASE_URL` à `WSLENV` automatiquement.
+Hors `ci.sh`, par exemple pour un test ciblé :
+
+```bash
+export DATABASE_URL=postgres://club:club@localhost:5433/club_test
+export WSLENV="${WSLENV:+$WSLENV:}DATABASE_URL"
+```
+
+Pour la parité avec la CI, utiliser un Node 22 Linux en tête de `PATH`.
 
 ## Tests et qualité
 
 ```bash
 npm test             # tests unitaires et d'intégration (Vitest)
-npm run test:e2e     # tests end-to-end (Playwright)
+npm run test:e2e     # tests end-to-end (Playwright, contre l'application construite)
 npm run lint         # ESLint
 npm run typecheck    # TypeScript
-scripts/ci.sh        # enchaînement complet de la CI (lint, typecheck, tests, audit, build)
+scripts/ci.sh        # enchaînement complet : lint, typecheck, tests, audit, build, E2E
 ```
+
+- **Seuil de couverture** : 70 % (lignes, branches, fonctions, instructions). Sous ce seuil, `npm test` échoue.
+- **Garde-fou de reset** : les tests font un `DROP SCHEMA public`. Ils refusent de tourner si le nom de la base
+  ne finit pas par `_test`. Pour forcer malgré tout : `ALLOW_DB_RESET=1` (usage tests uniquement, jamais en QUALIF ou PROD).
 
 ## Build
 
@@ -97,14 +147,32 @@ npm run build        # compile le serveur (dist/server) et le front (dist/web)
 npm start            # démarre le serveur compilé
 ```
 
+L'image applicative est définie par le `Dockerfile` (multi-stage, utilisateur non root) : elle emballe
+le `dist/` déjà compilé, sans recompiler au déploiement.
+
 ## Déploiement (QUALIF / PROD)
 
-Le déploiement suit le principe *build once* : l'artefact est compilé une seule fois puis promu
-d'un environnement à l'autre, sans recompilation.
+Le principe : **un artefact compilé une seule fois**, puis installé dans chaque environnement.
+
+| Environnement | Mécanisme |
+|---------------|-----------|
+| **QUALIF** | Promotion de l'artefact construit localement : aucune recompilation. |
+| **PROD** | Fusion sur `main` puis tag `vX.Y.Z` : la CI reconstruit de façon déterministe et publie la release. |
+
+Commandes (agents du teamleader) :
 
 - `/build` : compile la version candidate.
-- `/publish qualif` puis `/deploy qualif` : publie puis installe l'artefact sur l'environnement de qualification.
-- Les procédures détaillées sont dans `.claude/agents/environments/`.
+- `/publish qualif` puis `/deploy qualif` : publie puis installe l'artefact sur QUALIF.
+- Procédures détaillées : `.claude/agents/environments/`.
+
+### Fichier `qualif.env`
+
+Les variables propres à QUALIF sont dans `.claude/agents/environments/qualif.env`, créé à partir de
+`.claude/agents/environments/qualif.env.example`. Ce fichier n'est jamais commité.
+
+Variables obligatoires : `APP_PORT`, `APP_BASE_URL`, `POSTGRES_PASSWORD`, `SESSION_SECRET`, `ADMIN_EMAIL`,
+`ADMIN_PASSWORD`, `ADMIN_NAME`. Les variables `POSTGRES_USER` et `POSTGRES_DB` sont optionnelles (défaut `club`).
+`DATABASE_URL` n'est pas à renseigner : elle est dérivée par le fichier compose.
 
 ## Conventions
 
