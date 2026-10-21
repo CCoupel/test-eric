@@ -1,5 +1,6 @@
 import { randomInt } from 'node:crypto';
 import { z } from 'zod';
+import { withTx } from '../db/tx.js';
 import { conflict, notFound } from '../errors.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -83,14 +84,27 @@ export async function createActivity(pool, config, ownerId, input) {
   }
 }
 
+/** Verrou `FOR UPDATE` sur l'activité : sérialise avec les inscriptions (qui verrouillent la même ligne). */
+async function lockActivity(db, id) {
+  if (!UUID.test(id)) throw notFound('Activité');
+  const { rows } = await db.query(
+    'SELECT id, status, (SELECT count(*)::int FROM registrations r WHERE r.activity_id = a.id) AS registrations_count FROM activities a WHERE a.id = $1 FOR UPDATE OF a',
+    [id],
+  );
+  if (!rows[0]) throw notFound('Activité');
+  return rows[0];
+}
+
 export async function updateActivity(pool, config, id, patch) {
-  const current = await load(pool, id);
-  if (patch.capacity != null && patch.capacity < current.registrations_count) {
-    throw conflict('capacity_below_registrations', 'La capacité est inférieure au nombre d’inscrits');
-  }
-  const keys = UPDATABLE.filter((k) => k in patch); // liste blanche : jamais de nom de colonne issu de la requête
-  const sets = keys.map((k, i) => `${k} = $${i + 2}`);
-  await pool.query(`UPDATE activities SET ${sets.join(', ')}, updated_at = now() WHERE id = $1`, [id, ...keys.map((k) => patch[k])]);
+  await withTx(pool, async (db) => {
+    const current = await lockActivity(db, id);
+    if (patch.capacity != null && patch.capacity < current.registrations_count) {
+      throw conflict('capacity_below_registrations', 'La capacité est inférieure au nombre d’inscrits');
+    }
+    const keys = UPDATABLE.filter((k) => k in patch); // liste blanche : jamais de nom de colonne issu de la requête
+    const sets = keys.map((k, i) => `${k} = $${i + 2}`);
+    await db.query(`UPDATE activities SET ${sets.join(', ')}, updated_at = now() WHERE id = $1`, [id, ...keys.map((k) => patch[k])]);
+  });
   return getActivity(pool, config, id);
 }
 
@@ -108,11 +122,13 @@ export const openActivity = (pool, config, id) => transition(pool, config, id, {
 export const closeActivity = (pool, config, id) => transition(pool, config, id, { from: ['open'], to: 'closed' });
 
 export async function deleteActivity(pool, id) {
-  const current = await load(pool, id);
-  if (current.status !== 'draft' && current.registrations_count > 0) {
-    throw conflict('has_registrations', 'Des inscriptions actives existent');
-  }
-  await pool.query('DELETE FROM activities WHERE id = $1', [id]);
+  await withTx(pool, async (db) => {
+    const current = await lockActivity(db, id);
+    if (current.status !== 'draft' && current.registrations_count > 0) {
+      throw conflict('has_registrations', 'Des inscriptions actives existent');
+    }
+    await db.query('DELETE FROM activities WHERE id = $1', [id]);
+  });
 }
 
 /** Inscriptions actives (triées par created_at croissant) + compteurs ; jamais de token ni de consentement. */

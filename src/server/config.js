@@ -57,6 +57,25 @@ export function loadConfig(env = process.env) {
     problems.push('ADMIN_PASSWORD est une valeur triviale ou d\'exemple');
   }
 
+  // Conservation RGPD : purge des inscriptions N mois après la date de l'activité (défaut 12).
+  const retentionRaw = str('RETENTION_MONTHS', '12');
+  const retentionMonths = Number(retentionRaw);
+  if (!/^\d+$/.test(retentionRaw) || retentionMonths < 1 || retentionMonths > 120) problems.push('RETENTION_MONTHS doit être un entier entre 1 et 120');
+
+  // Limites anti-abus des routes publiques (valeurs par défaut sûres ; surchargeables pour les tests/QUALIF).
+  const intVar = (name, def, max = 100_000) => {
+    const raw = str(name, String(def));
+    const n = Number(raw);
+    if (!/^\d+$/.test(raw) || n < 1 || n > max) problems.push(`${name} doit être un entier entre 1 et ${max}`);
+    return n;
+  };
+  const publicLimits = {
+    registrationPerIpPerMin: intVar('RATE_LIMIT_REGISTRATION_PER_IP_MIN', 20),
+    registrationPerActivityPer10Min: intVar('RATE_LIMIT_REGISTRATION_PER_ACTIVITY_10MIN', 10),
+    tokenPerIpPerMin: intVar('RATE_LIMIT_TOKEN_PER_IP_MIN', 30),
+    viewPerIpPerMin: intVar('RATE_LIMIT_VIEW_PER_IP_MIN', 60),
+  };
+
   // TRUST_PROXY : nombre de sauts de proxy de confiance (ex. 1), ou liste d'IP/CIDR/alias Express. `true` est refusé (IP usurpable).
   const trustRaw = str('TRUST_PROXY', 'false');
   let trustProxy = false;
@@ -76,6 +95,8 @@ export function loadConfig(env = process.env) {
     databaseUrl,
     sessionSecret,
     trustProxy,
+    retentionMonths,
+    publicLimits,
     admin: admin.email ? admin : null,
     consentTextVersion: str('CONSENT_TEXT_VERSION', '2026-10'),
   };

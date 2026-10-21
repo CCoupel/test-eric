@@ -32,7 +32,12 @@ export function activityRoutes({ config, pool }) {
     res.status(204).end();
   });
 
-  router.get('/:id/registrations', async (req, res) => res.json(await svc.listRegistrations(pool, config, req.params.id)));
+  router.get('/:id/registrations', async (req, res) => {
+    const result = await svc.listRegistrations(pool, config, req.params.id);
+    // Accès aux données personnelles des inscrits : tracé (qui, quelle activité, combien) — aucune donnée personnelle.
+    req.log.info({ event: 'registrations_viewed', userId: req.user.id, activityId: req.params.id, count: result.count }, 'accès aux inscrits');
+    res.json(result);
+  });
 
   return router;
 }

@@ -8,6 +8,7 @@ import { HttpError } from './errors.js';
 import { checkOrigin } from './middleware/session.js';
 import { activityRoutes } from './routes/activities.js';
 import { authRoutes } from './routes/auth.js';
+import { publicRoutes } from './routes/public.js';
 import { createPool } from './db/pool.js';
 import pino from 'pino';
 import pinoHttp from 'pino-http';
@@ -22,7 +23,18 @@ export const REDACT_PATHS = [
   'req.body.password',
   'req.body.email',
   'req.body.contact_email',
+  'req.body.participant_name',
+  'req.body.contact_name',
+  'req.headers.referer', // peut contenir /r/<token>
 ];
+
+/** Masque les tokens de gestion dans les URLs journalisées (le token donne accès aux données d'un participant, parfois mineur). */
+export function maskUrl(url = '') {
+  return String(url)
+    .replace(/^(\/api\/public\/registrations\/)[^/?#]*/, '$1[redacted]')
+    .replace(/^(\/r\/)[^/?#]*/, '$1[redacted]');
+}
+const serializers = { req: pino.stdSerializers.wrapRequestSerializer((r) => ({ ...r, url: maskUrl(r.url) })) };
 
 // Sans argument : config lue dans l'environnement (DATABASE_URL…) et pool créé ; `app.locals.pool` permet de le fermer.
 export function createApp({ config = loadConfig(), pool = createPool(config), logger, loginLimit, loginEmailLimit, webDir: webDirOpt = join(here, '../../dist/web') } = {}) {
@@ -40,7 +52,7 @@ export function createApp({ config = loadConfig(), pool = createPool(config), lo
         : { strictTransportSecurity: false, contentSecurityPolicy: { directives: { 'upgrade-insecure-requests': null } } },
     ),
   );
-  app.use(pinoHttp({ logger: log, redact: REDACT_PATHS, autoLogging: { ignore: (req) => req.url === '/health' } }));
+  app.use(pinoHttp({ logger: log, redact: REDACT_PATHS, serializers, autoLogging: { ignore: (req) => req.url === '/health' } }));
   app.use(express.json({ limit: '100kb' }));
 
   app.use('/api', (_req, res, next) => {
@@ -50,6 +62,7 @@ export function createApp({ config = loadConfig(), pool = createPool(config), lo
   app.use('/api', checkOrigin(config));
   app.use('/api/auth', authRoutes({ config, pool, loginLimit, loginEmailLimit }));
   app.use('/api/activities', activityRoutes({ config, pool }));
+  app.use('/api/public', publicRoutes({ config, pool }));
 
   app.get('/health', async (_req, res) => {
     try {
@@ -64,7 +77,10 @@ export function createApp({ config = loadConfig(), pool = createPool(config), lo
   // Statique du front (dist/web) + fallback SPA hors /api et /health.
   if (existsSync(join(webDir, 'index.html'))) {
     app.use(express.static(webDir, { index: false }));
-    app.get(/^\/(?!api(\/|$)|health\/?$).*/, (_req, res) => res.sendFile('index.html', { root: webDir }));
+    app.get(/^\/(?!api(\/|$)|health\/?$).*/, (req, res) => {
+      if (req.path.startsWith('/r/')) res.set('Cache-Control', 'no-store'); // page de gestion : l'URL porte le token
+      res.sendFile('index.html', { root: webDir });
+    });
   }
 
   app.use('/api', (_req, res) => res.status(404).json({ error: 'not_found', message: 'Route inconnue' }));
@@ -81,7 +97,8 @@ export function createApp({ config = loadConfig(), pool = createPool(config), lo
       const codes = { 401: 'unauthenticated', 403: 'forbidden', 404: 'not_found', 429: 'rate_limited' };
       return res.status(err.status).json({ error: codes[err.status] ?? 'bad_request', message: err.expose ? err.message : 'Requête refusée' });
     }
-    req.log.error({ err }, 'erreur non gérée');
+    // Jamais l'objet erreur complet : une erreur pg embarque `detail`/`parameters` (valeurs saisies = données personnelles).
+    req.log.error({ errName: err.name, errCode: err.code, errMessage: String(err.message).slice(0, 300), stack: err.stack }, 'erreur non gérée');
     res.status(500).json({ error: 'internal_error', message: 'Erreur interne' });
   });
 
