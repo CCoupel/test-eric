@@ -1,0 +1,52 @@
+# QUALIF — application + PostgreSQL, image construite localement (sans registre).
+# Utilise depuis le dossier de deploiement build/qualif_v<X.Y.Z>/deploy/ (artefact extrait),
+# avec docker compose ou podman-compose (voir scripts/container-env.sh et
+# .claude/agents/environments/deploy.qualif.md).
+#
+# Variables : fichier `.env` a cote de ce compose (genere au DEPLOY depuis .env +
+# .claude/agents/environments/qualif.env). Il sert a la fois a l'interpolation ${...} ci-dessous
+# et a l'environnement du conteneur app (env_file). DATABASE_URL est derivee de POSTGRES_*.
+# Images en nom complet (docker.io/...) : podman refuse les noms courts sans registre de recherche.
+name: inscriptions-club-qualif
+
+services:
+  db:
+    image: docker.io/library/postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-club}
+      POSTGRES_USER: ${POSTGRES_USER:-club}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD manquant (qualif.env)}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: localhost/inscriptions-club:${APP_VERSION:-qualif}
+    restart: unless-stopped
+    depends_on:
+      - db
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      APP_PORT: ${APP_PORT:-3000}
+      DATABASE_URL: postgres://${POSTGRES_USER:-club}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-club}
+    ports:
+      - "${APP_PORT:-3000}:${APP_PORT:-3000}"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null \"http://127.0.0.1:$${APP_PORT}/health\" || exit 1"]
+      interval: 15s
+      timeout: 3s
+      start_period: 20s
+      retries: 3
+
+volumes:
+  pgdata:
