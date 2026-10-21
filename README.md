@@ -63,10 +63,8 @@ sont prévues pour les prochaines fonctionnalités.
 ```bash
 npm run db:migrate   # applique les migrations à la base indiquée par DATABASE_URL
 npm run dev          # serveur avec rechargement automatique (port APP_PORT, défaut 3000)
+npm run dev:web      # front Vite ; proxifie `/api` et `/health` vers le port 3000
 ```
-
-Le front Vite se lance avec `npx vite -c src/web/vite.config.ts` (le script npm dédié n'existe pas encore).
-Vite proxifie `/api` et `/health` vers le port 3000.
 
 ## Base de données de test
 

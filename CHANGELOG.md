@@ -7,7 +7,7 @@ et ce projet suit le [Versionnement sémantique](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
-## [0.1.0.0] - 2026-10-21
+## [0.1.0] - 2026-10-21
 
 Socle du milestone v0.1.0 (version de développement, non publiée).
 
@@ -20,4 +20,4 @@ Socle du milestone v0.1.0 (version de développement, non publiée).
 - Contrats API et modèles du milestone v0.1.0 (`contracts/`).
 - Pipeline CI : vérification de `package-lock.json` et publication des notes de release depuis cette section.
 
-[Unreleased]: https://github.com/CCoupel/test-eric/compare/v0.1.0.0...HEAD
+[Unreleased]: https://github.com/CCoupel/test-eric/compare/v0.1.0...HEAD
