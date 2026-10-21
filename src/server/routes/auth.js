@@ -34,8 +34,11 @@ export function authRoutes({ config, pool, loginLimit = 10, loginEmailLimit = 5 
     standardHeaders: false,
     legacyHeaders: false,
     keyGenerator: (req) => {
+      // Exécuté avant la validation zod : clé bornée à 254 car. (RFC 5321) pour ne pas gonfler le store avec des chaînes géantes.
       const email = req.body?.email;
-      return typeof email === 'string' && email.trim() ? `email:${normalizeEmail(email)}` : ipKeyGenerator(req.ip);
+      return typeof email === 'string' && email.trim()
+        ? `email:${normalizeEmail(email.slice(0, 254 + 64)).slice(0, 254)}`
+        : ipKeyGenerator(req.ip);
     },
     handler: (req, _res, next) => {
       req.log.warn({ event: 'login_rate_limited', ip: req.ip, scope: 'email' }, 'auth');

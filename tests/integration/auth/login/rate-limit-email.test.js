@@ -27,3 +27,18 @@ describe.skipIf(!hasDb)('Auth - limiteur par e-mail', () => {
     expect((await attempt('autre@club.fr', 'motdepasse-solide-2')).status).toBe(200);
   });
 });
+
+// App neuve : compteur par IP a zero (le fichier ci-dessus en consomme la quasi-totalite).
+describe.skipIf(!hasDb)('Auth - cle du limiteur par e-mail', () => {
+  let ctx;
+  beforeAll(async () => {
+    ctx = await makeApp();
+  });
+  afterAll(() => closeApp(ctx));
+
+  it('e-mail gigantesque ou non-string : jamais d’erreur serveur', async () => {
+    const send = (email) => request(ctx.app).post('/api/auth/login').send({ email, password: 'x' });
+    expect([400, 401]).toContain((await send(`${'a'.repeat(100_000)}@club.fr`)).status);
+    for (const email of [12345, ['a@b.fr'], { $ne: null }, null]) expect((await send(email)).status).toBe(400);
+  });
+});
