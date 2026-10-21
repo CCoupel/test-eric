@@ -4,6 +4,7 @@ import { conflict, notFound } from '../errors.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const BASE62 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+const UPDATABLE = ['title', 'description', 'starts_at', 'location', 'capacity'];
 export const STATUSES = ['draft', 'open', 'closed'];
 
 const title = z.string().trim().min(1, 'titre requis').max(120, '120 caractères maximum');
@@ -12,7 +13,7 @@ const startsAt = z.iso.datetime({ offset: true, message: 'date ISO 8601 invalide
 const location = z.string().trim().min(1, 'lieu requis').max(200, '200 caractères maximum');
 const capacity = z.number('nombre entier attendu').int('nombre entier attendu').positive('doit être > 0').nullable();
 
-export const createSchema = z.object({
+export const createSchema = z.strictObject({
   title,
   description: description.optional(),
   starts_at: startsAt,
@@ -20,10 +21,10 @@ export const createSchema = z.object({
   capacity: capacity.optional(),
 });
 export const updateSchema = z
-  .object({ title, description, starts_at: startsAt, location, capacity })
+  .strictObject({ title, description, starts_at: startsAt, location, capacity })
   .partial()
   .refine((o) => Object.keys(o).length > 0, 'au moins un champ à modifier');
-export const listQuerySchema = z.object({ status: z.enum(STATUSES).optional() });
+export const listQuerySchema = z.strictObject({ status: z.enum(STATUSES).optional() });
 
 const SELECT = `SELECT a.*, u.name AS owner_name,
   (SELECT count(*)::int FROM registrations r WHERE r.activity_id = a.id) AS registrations_count
@@ -87,7 +88,7 @@ export async function updateActivity(pool, config, id, patch) {
   if (patch.capacity != null && patch.capacity < current.registrations_count) {
     throw conflict('capacity_below_registrations', 'La capacité est inférieure au nombre d’inscrits');
   }
-  const keys = Object.keys(patch);
+  const keys = UPDATABLE.filter((k) => k in patch); // liste blanche : jamais de nom de colonne issu de la requête
   const sets = keys.map((k, i) => `${k} = $${i + 2}`);
   await pool.query(`UPDATE activities SET ${sets.join(', ')}, updated_at = now() WHERE id = $1`, [id, ...keys.map((k) => patch[k])]);
   return getActivity(pool, config, id);
