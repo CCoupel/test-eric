@@ -20,7 +20,7 @@ export const REDACT_PATHS = [
 
 // Sans argument : config lue dans l'environnement (DATABASE_URL…) et pool créé ; `app.locals.pool` permet de le fermer.
 export function createApp({ config = loadConfig(), pool = createPool(config), logger, webDir: webDirOpt = join(here, '../../dist/web') } = {}) {
-  const webDir = resolve(webDirOpt); // sendFile exige un chemin absolu
+  const webDir = resolve(webDirOpt); // absolu ; sendFile avec `root` évite le rejet des chemins contenant un segment « .xxx » (ex. .claude/worktrees)
   const log = logger ?? pino({ level: config.nodeEnv === 'test' ? 'silent' : 'info', redact: REDACT_PATHS });
   const app = express();
   app.locals.pool = pool;
@@ -49,7 +49,7 @@ export function createApp({ config = loadConfig(), pool = createPool(config), lo
   // Statique du front (dist/web) + fallback SPA hors /api et /health.
   if (existsSync(join(webDir, 'index.html'))) {
     app.use(express.static(webDir, { index: false }));
-    app.get(/^\/(?!api(\/|$)|health\/?$).*/, (_req, res) => res.sendFile(join(webDir, 'index.html')));
+    app.get(/^\/(?!api(\/|$)|health\/?$).*/, (_req, res) => res.sendFile('index.html', { root: webDir }));
   }
 
   app.use('/api', (_req, res) => res.status(404).json({ error: 'not_found', message: 'Route inconnue' }));

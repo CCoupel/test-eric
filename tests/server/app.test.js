@@ -55,6 +55,15 @@ describe('statique, fallback SPA et erreurs', () => {
     expect(spa.status).toBe(200);
     expect(spa.text).toContain('<title>spa</title>');
   });
+  it('sert la SPA même si le chemin du dossier contient un segment commençant par un point', async () => {
+    const dotted = join(mkdtempSync(join('_work/tmp', '.dot-')), 'web');
+    mkdirSync(dotted);
+    writeFileSync(join(dotted, 'index.html'), '<title>dotted</title>');
+    const res = await request(createApp({ config: cfg(), pool: okPool, webDir: dotted })).get('/activities');
+    expect(res.status).toBe(200);
+    expect(res.text).toContain('dotted');
+    rmSync(join(dotted, '..'), { recursive: true, force: true });
+  });
   it('ne renvoie pas la SPA pour /api, /api/x et /health/', async () => {
     for (const path of ['/api', '/api/inconnu']) {
       const res = await request(app).get(path);
