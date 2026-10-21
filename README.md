@@ -76,13 +76,57 @@ Variables principales :
 |----------|------|
 | `DATABASE_URL` | Connexion PostgreSQL (obligatoire) |
 | `APP_PORT` | Port du serveur (défaut `3000`) |
-| `APP_BASE_URL` | URL publique de l'application (obligatoire en production) |
+| `APP_BASE_URL` | URL publique de l'application, origine stricte des requêtes modifiantes (obligatoire en production). En développement avec Vite : `http://localhost:5173` |
+| `SESSION_SECRET` | Secret de signature des sessions : **au moins 32 caractères**, variés (≥ 10 caractères distincts). Obligatoire |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` | Compte responsable initial, créé au démarrage. Mot de passe : **au moins 12 caractères**, 72 octets maximum, non trivial. Les deux premières variables vont ensemble |
+| `TRUST_PROXY` | Nombre de reverse proxys de confiance (ex. `1`), ou liste d'adresses. Vide = aucun proxy. `true` est refusé |
 | `NODE_ENV` | Environnement d'exécution |
 | `CONSENT_TEXT_VERSION` | Version du texte de consentement RGPD |
 | `ALLOW_DB_RESET` | Tests uniquement : force le reset d'une base dont le nom ne finit pas par `_test` |
 
-Les autres variables de `.env.example` (`SESSION_SECRET`, `ADMIN_*`, `SMTP_*`, `MAIL_FROM`)
-sont prévues pour les prochaines fonctionnalités.
+Le serveur **refuse de démarrer** si une de ces règles n'est pas respectée. Les valeurs d'exemple sont refusées.
+
+Les variables `SMTP_*` et `MAIL_FROM` sont prévues pour l'envoi des e-mails groupés (prochain lot).
+
+## Comptes responsables
+
+Les responsables se connectent avec un e-mail et un mot de passe. Il n'existe pas encore d'inscription publique.
+
+- **Compte initial** : créé au démarrage à partir de `ADMIN_EMAIL`, `ADMIN_PASSWORD` et `ADMIN_NAME`.
+- **Comptes suivants** : en ligne de commande, sur le serveur ou dans le conteneur.
+
+  ```bash
+  npm run user:create -- <email> <nom>
+  ```
+
+  Le mot de passe est **généré**, affiché **une seule fois** sur la sortie standard, et jamais journalisé.
+  Transmettez-le hors canal public.
+- **Pas de changement de mot de passe en v1** : le mot de passe généré est définitif. Une commande de réinitialisation
+  est prévue (voir [`docs/SECURITY.md`](docs/SECURITY.md)).
+- Tous les responsables ont les mêmes droits en v1.
+
+## Sécurité
+
+Résumé. Le modèle de menace complet est dans [`docs/SECURITY.md`](docs/SECURITY.md).
+
+- Session dans un cookie `HttpOnly`, `SameSite=Lax`, `Secure` en HTTPS. Le logout révoque toutes les sessions du compte.
+- Limites de connexion : **10 tentatives par minute et par IP**, et **5 échecs par 15 minutes et par e-mail**.
+  Un compte peut donc être bloqué temporairement, même par un tiers qui connaît son adresse.
+- Vérification de l'en-tête `Origin` sur les requêtes modifiantes de `/api`.
+- En-têtes de sécurité via helmet. Réponses de `/api` en `Cache-Control: no-store`.
+- Les mots de passe sont hachés (bcrypt). Les secrets ne sont jamais passés en argument de ligne de commande.
+
+## Utilisation
+
+Parcours d'un responsable :
+
+1. Se connecter sur `/login` avec son e-mail et son mot de passe.
+2. Créer une activité (titre, date, lieu, places) depuis `/activities/new`.
+3. L'ouvrir aux inscriptions depuis la fiche de l'activité (`/activities/:id`). Les états possibles sont gérés depuis cette fiche : ouvrir, fermer, rouvrir, supprimer.
+4. Copier le **lien public** de l'activité, au format `/a/<slug>`. L'inscription publique depuis ce lien est livrée au lot suivant (LOT-3).
+5. Suivre la liste des inscrits depuis la fiche de l'activité.
+
+Après une déconnexion, toute session ouverte sur le compte est invalide.
 
 ## Lancer en développement
 
