@@ -29,3 +29,14 @@ npm run typecheck
 npm test -- --coverage
 npm audit --audit-level=high
 npm run build
+
+# E2E Playwright contre l'application construite (playwright.config.ts lance `npm run start`
+# sur APP_PORT avec la base ci-dessus). Les dependances systeme du navigateur sont installees
+# par la CI (runner jetable, sudo sans mot de passe) ; en local, une seule fois :
+#   sudo npx playwright install-deps chromium
+if [ -n "${CI:-}" ]; then
+  npx playwright install --with-deps chromium
+else
+  npx playwright install chromium
+fi
+npm run test:e2e
