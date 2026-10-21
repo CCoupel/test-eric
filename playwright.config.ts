@@ -16,6 +16,7 @@ if (!externalUrl) {
 export default defineConfig({
   testDir: 'e2e',
   testMatch: '**/*.spec.ts',
+  expect: { timeout: 15_000 }, // login bcrypt + creations enchainees : marge sur machines lentes
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,

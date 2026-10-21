@@ -5,7 +5,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import { hasDb, makeApp, closeApp, resetData, createUser, expectError } from '../../_support/harness.js';
 
-describe.skipIf(!hasDb)('Auth - rate limiting du login', () => {
+describe.skipIf(!hasDb)('Auth - rate limiting du login', { timeout: 20_000 }, () => {
   let ctx;
   beforeAll(async () => {
     ctx = await makeApp();

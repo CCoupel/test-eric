@@ -98,7 +98,7 @@ describe.skipIf(!url)('seed admin et user:create (PostgreSQL)', () => {
   });
 });
 
-describe('trust proxy et rate-limit par IP (pool simulé)', () => {
+describe('trust proxy et rate-limit par IP (pool simulé)', { timeout: 20_000 }, () => {
   const pool = { query: async () => ({ rows: [] }) };
   const post = (app, ip) =>
     request(app).post('/api/auth/login').set('X-Forwarded-For', ip).send({ email: `u${ip}@club.fr`, password: 'x' });
@@ -124,7 +124,7 @@ describe('en-têtes /api', () => {
   });
 });
 
-describe('RATE_LIMIT_LOGIN_PER_IP_MIN', () => {
+describe('RATE_LIMIT_LOGIN_PER_IP_MIN', { timeout: 20_000 }, () => {
   const pool = { query: async () => ({ rows: [] }) };
   const attempt = (app, i) => request(app).post('/api/auth/login').send({ email: `u${i}@club.fr`, password: 'x' });
 

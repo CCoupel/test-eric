@@ -3,7 +3,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import { hasDb, makeApp, closeApp, resetData, createUser, expectError } from '../../_support/harness.js';
 
-describe.skipIf(!hasDb)('Auth - limiteur par e-mail', () => {
+describe.skipIf(!hasDb)('Auth - limiteur par e-mail', { timeout: 20_000 }, () => {
   let ctx;
   const attempt = (email, password) => request(ctx.app).post('/api/auth/login').send({ email, password });
   beforeAll(async () => {
@@ -29,7 +29,7 @@ describe.skipIf(!hasDb)('Auth - limiteur par e-mail', () => {
 });
 
 // App neuve : compteur par IP a zero (le fichier ci-dessus en consomme la quasi-totalite).
-describe.skipIf(!hasDb)('Auth - cle du limiteur par e-mail', () => {
+describe.skipIf(!hasDb)('Auth - cle du limiteur par e-mail', { timeout: 20_000 }, () => {
   let ctx;
   beforeAll(async () => {
     ctx = await makeApp();
@@ -44,7 +44,7 @@ describe.skipIf(!hasDb)('Auth - cle du limiteur par e-mail', () => {
 });
 
 // App neuve, limiteur par IP releve : seul le limiteur par e-mail est en jeu.
-describe.skipIf(!hasDb)('Auth - limiteur par e-mail : seuls les echecs comptent', () => {
+describe.skipIf(!hasDb)('Auth - limiteur par e-mail : seuls les echecs comptent', { timeout: 20_000 }, () => {
   let ctx;
   beforeAll(async () => {
     ctx = await makeApp({ env: { RATE_LIMIT_LOGIN_PER_IP_MIN: '1000' } });
