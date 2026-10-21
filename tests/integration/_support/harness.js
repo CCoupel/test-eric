@@ -8,13 +8,13 @@ export const hasDb = Boolean(process.env.DATABASE_URL);
 export const SESSION_SECRET = 'test-secret-test-secret-test-secret-0123456789';
 export const BASE_URL = 'http://localhost:3000';
 
-export async function makeApp() {
+export async function makeApp(options = {}) {
   process.env.NODE_ENV = 'test';
   process.env.SESSION_SECRET = SESSION_SECRET;
   process.env.APP_BASE_URL = BASE_URL;
   vi.resetModules();
   const { createApp } = await import('../../../src/server/app.js');
-  const app = createApp();
+  const app = createApp(options);
   return { app, pool: app.locals.pool };
 }
 

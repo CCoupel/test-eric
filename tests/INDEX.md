@@ -14,3 +14,7 @@
 | tests/integration/activities/crud/ | integration | backend | Activites : creation, lecture, liste/filtre, modification, suppression | feature | |
 | tests/integration/activities/etats/ | integration | backend | Activites : transitions d'etat, liste des inscrits | feature | |
 | e2e/activites/creation/ | e2e | frontend | Connexion, creation et ouverture d'une activite, lien public | feature | critical |
+| tests/integration/inscription/creation/ | integration | backend | Inscription publique : fiche, creation, validation, conflits 409, concurrence, rate-limit | feature | critical |
+| tests/integration/inscription/gestion/ | integration | backend | Gestion par token, anonymisation RGPD, vue responsable, interactions LOT-2, securite/logs | feature | |
+| tests/integration/inscription/retention/ | integration | backend | Purge RGPD `data:purge` (RETENTION_MONTHS) | feature | |
+| e2e/inscription/parcours/ | e2e | frontend | Parcours parent : inscription, confirmation, desinscription | feature | critical |
