@@ -3,6 +3,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
 import helmet from 'helmet';
+import { loadConfig } from './config.js';
+import { createPool } from './db/pool.js';
 import pino from 'pino';
 import pinoHttp from 'pino-http';
 
@@ -16,9 +18,11 @@ export const REDACT_PATHS = [
   'req.body.password',
 ];
 
-export function createApp({ config, pool, logger, webDir = join(here, '../../dist/web') }) {
+// Sans argument : config lue dans l'environnement (DATABASE_URL…) et pool créé ; `app.locals.pool` permet de le fermer.
+export function createApp({ config = loadConfig(), pool = createPool(config), logger, webDir = join(here, '../../dist/web') } = {}) {
   const log = logger ?? pino({ level: config.nodeEnv === 'test' ? 'silent' : 'info', redact: REDACT_PATHS });
   const app = express();
+  app.locals.pool = pool;
   app.disable('x-powered-by');
   app.use(helmet());
   app.use(pinoHttp({ logger: log, redact: REDACT_PATHS, autoLogging: { ignore: (req) => req.url === '/health' } }));

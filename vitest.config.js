@@ -8,7 +8,7 @@ export default defineConfig({
         test: {
           name: 'server',
           environment: 'node',
-          include: ['tests/server/**/*.test.js'],
+          include: ['tests/server/**/*.test.js', 'tests/integration/**/*.test.js'],
           globalSetup: ['tests/server/global-setup.js'],
           fileParallelism: false,
         },
