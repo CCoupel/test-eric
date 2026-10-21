@@ -4,12 +4,17 @@ import { PublicLayout } from '../components/PublicLayout';
 
 export function PrivacyPage() {
   const [contact, setContact] = useState<string | null>(null);
+  const [months, setMonths] = useState(12);
 
   useEffect(() => {
     let active = true;
     publicApi
       .info()
-      .then((i) => active && setContact(i.contact_email))
+      .then((i) => {
+        if (!active) return;
+        setContact(i.contact_email);
+        if (Number.isInteger(i.retention_months) && (i.retention_months ?? 0) > 0) setMonths(i.retention_months as number);
+      })
       .catch(() => undefined); // repli : texte générique ci-dessous
     return () => {
       active = false;
@@ -25,7 +30,7 @@ export function PrivacyPage() {
         <h2>Finalités</h2>
         <p>Ces informations servent uniquement à gérer votre inscription à l’activité du club et à vous contacter à son sujet. Elles ne sont ni vendues ni transmises à des tiers.</p>
         <h2>Conservation</h2>
-        <p>Vos données sont conservées jusqu’à 12 mois après la date de l’activité, puis supprimées automatiquement.</p>
+        <p>Vos données sont conservées jusqu’à <span data-testid="privacy-retention">{months} mois</span> après la date de l’activité, puis supprimées automatiquement.</p>
         <h2>Vos droits</h2>
         <p>
           Vous pouvez vous désinscrire et faire effacer vos données à tout moment grâce au lien de gestion affiché à la fin de votre inscription

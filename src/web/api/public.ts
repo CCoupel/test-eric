@@ -31,6 +31,7 @@ export interface RegistrationInput {
 
 export interface PublicInfo {
   contact_email: string | null;
+  retention_months?: number;
 }
 
 export const publicApi = {
