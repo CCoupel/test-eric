@@ -18,3 +18,4 @@
 | tests/integration/inscription/gestion/ | integration | backend | Gestion par token, anonymisation RGPD, vue responsable, interactions LOT-2, securite/logs | feature | |
 | tests/integration/inscription/retention/ | integration | backend | Purge RGPD `data:purge` (RETENTION_MONTHS) | feature | |
 | e2e/inscription/parcours/ | e2e | frontend | Parcours parent : inscription, confirmation, desinscription | feature | critical |
+| e2e/inscription/retrait-responsable/ | e2e | frontend | Retrait d'un inscrit par le responsable (droit a l'effacement) | feature | critical |

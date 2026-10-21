@@ -84,3 +84,10 @@ describe('erreur 500 sur route publique', () => {
     expect(all).toContain('[redacted]');
   });
 });
+
+describe('maskUrl — casse', () => {
+  it('masque aussi /R/<token> et /API/PUBLIC/REGISTRATIONS/<token> (Express route sans casse)', () => {
+    expect(maskUrl('/R/abc')).toBe('/R/[redacted]');
+    expect(maskUrl('/API/PUBLIC/REGISTRATIONS/abc')).toBe('/API/PUBLIC/REGISTRATIONS/[redacted]');
+  });
+});
