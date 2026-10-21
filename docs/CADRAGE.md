@@ -80,3 +80,9 @@ Aucune solution n'est confirmée comme couvrant les 3 cas d'usage v1 gratuitemen
 - Cible du site : jeunes pratiquants et leurs parents, en plus des responsables d'activité [precision]
 - À confirmer au cadrage `/marketing` : palette, typographie, visuels, vocabulaire (dojo, ceinture, cours...)
 - Point d'attention : public de mineurs, donc consentement parental à prévoir côté RGPD (à trancher au cadrage de l'issue d'inscription, #6) [propose]
+
+### 8. Décisions RGPD (inscriptions publiques, LOT-3)
+- Consentement parental : un mineur est inscrit par son parent ou tuteur, qui donne le consentement ; le consentement est tracé (version du texte, date) [décision utilisateur, 2026-10-21]
+- Conservation : inscriptions purgées `RETENTION_MONTHS` (défaut 12) mois après la date de l'activité [décision utilisateur, 2026-10-21]
+- Accès aux inscrits : ouvert à tous les responsables, chaque consultation journalisée [décision utilisateur, 2026-10-21]
+- Doublon d'inscription : réponse 409 conservée malgré le risque de sondage, atténuée par les limites de débit [décision utilisateur, 2026-10-21]

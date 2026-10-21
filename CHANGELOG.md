@@ -39,8 +39,25 @@ Socle du milestone v0.1.0 (non publié à ce stade).
 - Liste des inscrits d'une activité (migrations 003 et 004).
 - Variables `SESSION_SECRET`, `ADMIN_*`, `TRUST_PROXY` (QUALIF et PROD : `qualif.env.example`, `prod.env.example`).
 - Documentation sécurité : `docs/SECURITY.md`.
+- Inscription publique depuis `/a/<slug>` : adulte, ou mineur inscrit par son parent ou tuteur ; consentement versionné,
+  non pré-coché ; confirmation affichant le lien de gestion (affiché une seule fois).
+- Lien de gestion `/r/<token>` : consultation de son inscription et désinscription avec confirmation.
+- Page Confidentialité (`/confidentialite`) et route `GET /api/public/info`.
+- Retrait d'un inscrit par le responsable, avec suppression physique des données.
+- Purge RGPD : `npm run data:purge`, automatique au démarrage puis toutes les 24 heures ; durée `RETENTION_MONTHS` (défaut 12).
+- Variables `CONTACT_EMAIL`, `RETENTION_MONTHS` et `RATE_LIMIT_*` (`.env.example`, `contracts/models.md`).
+- Migrations 006 (inscriptions, envois) et 007 (trigger d'anonymisation).
 
 ### Security
+- Jeton de gestion d'inscription : 256 bits, stocké haché (SHA-256) seul ; réponse identique pour un jeton inconnu, invalide ou supprimé.
+- Anonymisation des données à la suppression (désinscription, retrait, purge) dans une transaction, doublée d'un trigger en base.
+- Tokens masqués dans les journaux du serveur ; en-tête `Referrer-Policy: no-referrer` ; `Cache-Control: no-store` sur `/r/*`.
+- Anti-abus des routes publiques : limites par IP et par IP+activité, honeypot, schémas `strictObject`.
+- Journal des consultations de la liste des inscrits (responsable, activité, nombre).
+- Fiche publique en liste blanche de champs (pas d'identifiant interne ni de compteur d'inscrits).
+- Inscription refusée dès que l'activité a commencé (409 `activity_closed`).
+- Version du consentement liée au texte : un test échoue si le texte change sans changement de version.
+- Limite de connexion par IP configurable (`RATE_LIMIT_LOGIN_PER_IP_MIN`, défaut 10), plafonnée à 50 en production.
 - Révocation des sessions : le logout invalide toutes les sessions du compte (claim `tv`, migration 005).
 - Vérification stricte de `Origin` sur les requêtes modifiantes de `/api`, y compris `Sec-Fetch-Site: cross-site`.
 - Limite de connexion par e-mail (5 échecs / 15 min), en plus de la limite par IP (10 / min).

@@ -80,8 +80,15 @@ Variables principales :
 | `SESSION_SECRET` | Secret de signature des sessions : **au moins 32 caractères**, variés (≥ 10 caractères distincts). Obligatoire |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` | Compte responsable initial, créé au démarrage. Mot de passe : **au moins 12 caractères**, 72 octets maximum, non trivial. Les deux premières variables vont ensemble |
 | `TRUST_PROXY` | Nombre de reverse proxys de confiance (ex. `1`), ou liste d'adresses. Vide = aucun proxy. `true` est refusé |
+| `CONTACT_EMAIL` | Contact RGPD affiché sur la page de confidentialité. Facultatif : sans valeur, la page affiche un texte neutre. Ce n'est jamais `ADMIN_EMAIL` (identifiant de connexion) |
+| `RETENTION_MONTHS` | Durée de conservation des inscriptions après la date de l'activité (défaut `12`, entre `1` et `120`) |
+| `RATE_LIMIT_LOGIN_PER_IP_MIN` | Connexions par minute et par IP (défaut `10`). Au-delà de `50` en production, le démarrage est refusé |
+| `RATE_LIMIT_REGISTRATION_PER_IP_MIN` | Inscriptions publiques par minute et par IP (défaut `20`) |
+| `RATE_LIMIT_REGISTRATION_PER_ACTIVITY_10MIN` | Inscriptions par IP et par activité sur 10 minutes (défaut `10`) |
+| `RATE_LIMIT_TOKEN_PER_IP_MIN` | Accès à un lien de gestion `/r/<token>` par minute et par IP (défaut `30`) |
+| `RATE_LIMIT_VIEW_PER_IP_MIN` | Consultations de fiches publiques par minute et par IP (défaut `60`) |
 | `NODE_ENV` | Environnement d'exécution |
-| `CONSENT_TEXT_VERSION` | Version du texte de consentement RGPD |
+| `CONSENT_TEXT_VERSION` | Version du texte de consentement RGPD. Tout changement du texte doit changer cette version (un test le vérifie) |
 | `ALLOW_DB_RESET` | Tests uniquement : force le reset d'une base dont le nom ne finit pas par `_test` |
 
 Le serveur **refuse de démarrer** si une de ces règles n'est pas respectée. Les valeurs d'exemple sont refusées.
@@ -110,23 +117,57 @@ Les responsables se connectent avec un e-mail et un mot de passe. Il n'existe pa
 Résumé. Le modèle de menace complet est dans [`docs/SECURITY.md`](docs/SECURITY.md).
 
 - Session dans un cookie `HttpOnly`, `SameSite=Lax`, `Secure` en HTTPS. Le logout révoque toutes les sessions du compte.
-- Limites de connexion : **10 tentatives par minute et par IP**, et **5 échecs par 15 minutes et par e-mail**.
-  Un compte peut donc être bloqué temporairement, même par un tiers qui connaît son adresse.
+- Limites de connexion : **10 tentatives par minute et par IP** (réglable, voir `RATE_LIMIT_LOGIN_PER_IP_MIN`),
+  et **5 échecs par 15 minutes et par e-mail**. Seuls les échecs comptent. Un compte peut donc être bloqué temporairement,
+  même par un tiers qui connaît son adresse.
+- Inscriptions publiques : limites par IP et par activité, honeypot anti-robot, token de gestion haché en base.
+  Les valeurs sont dans le tableau de configuration.
 - Vérification de l'en-tête `Origin` sur les requêtes modifiantes de `/api`.
-- En-têtes de sécurité via helmet. Réponses de `/api` en `Cache-Control: no-store`.
+- En-têtes de sécurité via helmet. Réponses de `/api` et des pages `/r/*` en `Cache-Control: no-store`.
 - Les mots de passe sont hachés (bcrypt). Les secrets ne sont jamais passés en argument de ligne de commande.
+- Données personnelles des participants : voir la section Exploitation et [`docs/SECURITY.md`](docs/SECURITY.md).
 
 ## Utilisation
 
-Parcours d'un responsable :
+### Parcours d'un responsable
 
 1. Se connecter sur `/login` avec son e-mail et son mot de passe.
 2. Créer une activité (titre, date, lieu, places) depuis `/activities/new`.
 3. L'ouvrir aux inscriptions depuis la fiche de l'activité (`/activities/:id`). Les états possibles sont gérés depuis cette fiche : ouvrir, fermer, rouvrir, supprimer.
-4. Copier le **lien public** de l'activité, au format `/a/<slug>`. L'inscription publique depuis ce lien est livrée au lot suivant (LOT-3).
-5. Suivre la liste des inscrits depuis la fiche de l'activité.
+4. Copier le **lien public** de l'activité, au format `/a/<slug>`, et le partager.
+5. Suivre la liste des inscrits depuis la fiche de l'activité. Chaque consultation est journalisée (qui, quelle activité, combien d'inscrits).
+6. **Retirer un inscrit** : bouton de suppression sur sa ligne, avec confirmation. Ses données sont supprimées, pas seulement masquées.
 
 Après une déconnexion, toute session ouverte sur le compte est invalide.
+
+### Parcours d'un participant
+
+1. Ouvrir le lien public `/a/<slug>` de l'activité. La fiche affiche la date, le lieu et les places restantes.
+2. Remplir le formulaire :
+   - **adulte** : nom et e-mail du participant ;
+   - **mineur** : nom de l'enfant, puis nom et e-mail du parent ou du tuteur. Le mineur est toujours inscrit par son représentant légal.
+3. Cocher le **consentement** (non pré-coché). Le texte, sa durée de conservation et la version acceptée sont affichés.
+4. Valider. Une page de confirmation affiche le **lien de gestion** `/r/<token>`. Il n'est affiché **qu'une fois** : le copier et le conserver.
+5. Pour se désinscrire, ouvrir le lien de gestion et confirmer. Les données sont supprimées.
+
+Impossible de s'inscrire une fois l'activité commencée, ou si elle est complète. Un même e-mail ne peut pas inscrire deux fois le même nom à une activité ; un parent peut inscrire plusieurs enfants.
+Un participant qui a perdu son lien de gestion doit demander au responsable de le retirer de la liste.
+
+Une page **Confidentialité** (`/confidentialite`) décrit le traitement des données.
+
+## Exploitation (données personnelles)
+
+- **Purge** : les inscriptions sont supprimées automatiquement `RETENTION_MONTHS` mois après la date de l'activité.
+  La purge s'exécute au démarrage du serveur, puis toutes les 24 heures. Elle peut aussi être lancée à la main :
+
+  ```bash
+  npm run data:purge
+  ```
+
+  Elle est idempotente et n'affiche que des compteurs, jamais de donnée personnelle.
+- **Journaux** : les journaux du serveur ne contiennent ni e-mail, ni token, ni nom de participant. Les adresses IP restent présentes dans les journaux d'authentification et d'inscription : prévoir une rétention courte (30 jours) côté exploitation.
+- **Reverse proxy** : son journal d'accès contient les chemins `/r/<token>`. Le masquer, et limiter sa rétention, relève du déploiement.
+- **`TRUST_PROXY`** : à renseigner avec le nombre réel de proxys de confiance derrière un reverse proxy. Sans cela, tous les clients partagent le même quota de limitation.
 
 ## Lancer en développement
 
