@@ -34,7 +34,7 @@ services:
     depends_on:
       - db
     env_file:
-      - .env
+      - .env          # APP_BASE_URL, DATABASE_URL, SESSION_SECRET, ADMIN_*, TRUST_PROXY, SMTP_*, ...
     environment:      # valeurs non secretes uniquement
       NODE_ENV: production
       APP_PORT: ${APP_PORT:-3000}

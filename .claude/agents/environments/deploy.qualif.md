@@ -18,7 +18,8 @@ Moteur de conteneurs detecte par `scripts/container-env.sh` : `docker compose` (
 | `APP_PORT` | port publie sur l'hote et ecoute dans le conteneur (> 1024 en podman rootless) |
 | `APP_BASE_URL` | obligatoire en production (ex. `http://localhost:8080`) |
 | `POSTGRES_PASSWORD` (+ `POSTGRES_USER`, `POSTGRES_DB`, defaut `club`) | base du conteneur `db` ; `DATABASE_URL` en est derivee dans `deploy/.env` ; `deploy/db.env` = POSTGRES_* (jamais dans la sortie de compose) |
-| `SESSION_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` | contrat (obligatoires) |
+| `SESSION_SECRET` (>= 32 car.), `ADMIN_EMAIL`, `ADMIN_PASSWORD` (>= 12 car.), `ADMIN_NAME` | obligatoires — compte admin initial cree au 1er demarrage (seed idempotent) |
+| `TRUST_PROXY` | optionnel, defaut `0` (aucun reverse proxy) ; nombre de proxys de confiance sinon |
 | `SMTP_*`, `MAIL_FROM`, `CONSENT_TEXT_VERSION` | optionnels (SMTP vide → transport stub) |
 
 Variable obligatoire vide → STOP, remonter au teamleader (jamais de valeur inventee).
@@ -39,6 +40,8 @@ for k in APP_PORT APP_BASE_URL POSTGRES_PASSWORD SESSION_SECRET ADMIN_EMAIL ADMI
   [ -n "${!k:-}" ] || MISSING="$MISSING $k"
 done
 [ -z "$MISSING" ] || { echo "Variables QUALIF manquantes :$MISSING"; exit 1; }
+[ "${#SESSION_SECRET}" -ge 32 ] || { echo "SESSION_SECRET : 32 caracteres minimum"; exit 1; }
+[ "${#ADMIN_PASSWORD}" -ge 12 ] || { echo "ADMIN_PASSWORD : 12 caracteres minimum"; exit 1; }
 
 # 2. Install — extraction (version precedente conservee pour rollback) + .env fusionne
 DEPLOY_DIR="$QUALIF_DIR/deploy"
