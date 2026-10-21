@@ -74,3 +74,9 @@ Aucune solution n'est confirmée comme couvrant les 3 cas d'usage v1 gratuitemen
 
 ### 6. Conventions d'équipe
 - Standard : branches milestone/* et feature, Conventional Commits, revue de code par agent, couverture min. 70 % [precision]
+
+### 7. Direction du site marketing
+- Esprit arts martiaux, tourné vers les jeunes (ton énergique, discipline, respect, progression) [precision, 2026-10-21]
+- Cible du site : jeunes pratiquants et leurs parents, en plus des responsables d'activité [precision]
+- À confirmer au cadrage `/marketing` : palette, typographie, visuels, vocabulaire (dojo, ceinture, cours...)
+- Point d'attention : public de mineurs, donc consentement parental à prévoir côté RGPD (à trancher au cadrage de l'issue d'inscription, #6) [propose]
