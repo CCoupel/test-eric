@@ -1,0 +1,10 @@
+# Mises a jour des actions GitHub epinglees sur SHA (decision D1, milestone v0.1.0).
+# Les PR ciblent la branche par defaut (main) : les integrer via la branche milestone en cours.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
