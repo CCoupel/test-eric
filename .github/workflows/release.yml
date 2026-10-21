@@ -34,7 +34,7 @@ jobs:
         env:
           V: ${{ steps.version.outputs.value }}
         run: |
-          tar -czf "inscriptions-club-$V.tar.gz" dist Dockerfile docker-compose.prod.yml package.json package-lock.json
+          tar -czf "inscriptions-club-$V.tar.gz" dist Dockerfile .dockerignore docker-compose.prod.yml package.json package-lock.json
           sha256sum "inscriptions-club-$V.tar.gz" > "inscriptions-club-$V.tar.gz.sha256"
 
       - name: Notes de release (section CHANGELOG.md de la version)
