@@ -1,4 +1,4 @@
-import { isSingleAddress } from './address.js';
+import { isSingleAddress, isSingleSender } from './address.js';
 // Lecture et validation de l'environnement (contrat : contracts/models.md « Variables d'environnement »).
 const NODE_ENVS = ['development', 'test', 'production'];
 
@@ -98,8 +98,8 @@ export function loadConfig(env = process.env) {
   if (!Number.isInteger(smtpPort) || smtpPort < 1 || smtpPort > 65535) problems.push('SMTP_PORT doit être un port valide');
   if (Boolean(smtpHost) !== Boolean(mailFrom)) problems.push('SMTP_HOST et MAIL_FROM doivent être fournis ensemble');
   if (Boolean(smtpUser) !== Boolean(smtpPass)) problems.push('SMTP_USER et SMTP_PASS doivent être fournis ensemble');
-  if (mailFrom && !/^(?:[^<>\r\n"@]+ )?<?[^\s<>@,;"]+@[^\s<>@,;"]+\.[^\s<>@,;"]+>?$/.test(mailFrom)) {
-    problems.push('MAIL_FROM doit être une adresse unique (« a@b.fr » ou « Nom <a@b.fr> »), sans retour à la ligne');
+  if (mailFrom && !isSingleSender(mailFrom)) {
+    problems.push('MAIL_FROM doit être une adresse unique (« a@b.fr » ou « Nom <a@b.fr> », nom sans virgule ni caractère de contrôle)');
   }
   if (smtpHost && /[\s/]/.test(smtpHost)) problems.push('SMTP_HOST invalide');
   // TLS imposé par défaut sauf pour un hôte local (relais de développement) ; SMTP_REQUIRE_TLS=false pour forcer le clair sur un hôte distant (déconseillé).

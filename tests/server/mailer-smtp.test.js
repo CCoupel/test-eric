@@ -11,12 +11,15 @@ describe('config SMTP', () => {
     const c = loadConfig({ ...base, SMTP_HOST: 'smtp.example', MAIL_FROM: 'Club <no-reply@club.example>', SMTP_USER: 'u', SMTP_PASS: 'p' });
     expect(c.mail).toMatchObject({ transport: 'smtp', host: 'smtp.example', port: 587, secure: false, from: 'Club <no-reply@club.example>' });
     expect(loadConfig({ ...base, SMTP_HOST: 'h', MAIL_FROM: 'a@b.fr', SMTP_SECURE: 'true' }).mail.port).toBe(465);
+    for (const ok of ['a@b.fr', 'Club des sports <no-reply@club.example>', 'Club Élan 2026 <a@b.fr>']) {
+      expect(loadConfig({ ...base, SMTP_HOST: 'h', MAIL_FROM: ok }).mail.from, ok).toBe(ok);
+    }
   });
   it('refuse : paire incomplète, MAIL_FROM multiple ou avec CR/LF, port ou secure invalides, hôte douteux', () => {
     expect(() => loadConfig({ ...base, SMTP_HOST: 'h' })).toThrow(/ensemble/);
     expect(() => loadConfig({ ...base, MAIL_FROM: 'a@b.fr' })).toThrow(/ensemble/);
     expect(() => loadConfig({ ...base, SMTP_HOST: 'h', MAIL_FROM: 'a@b.fr', SMTP_USER: 'u' })).toThrow(/SMTP_USER et SMTP_PASS/);
-    for (const bad of ['a@b.fr, c@d.fr', 'a@b.fr\nBcc: x@y.fr', 'pas une adresse', '<a@b.fr> <c@d.fr>']) {
+    for (const bad of ['a@b.fr, c@d.fr', 'a@b.fr\nBcc: x@y.fr', 'pas une adresse', '<a@b.fr> <c@d.fr>', 'A, B <x@y.fr>', 'A; B <x@y.fr>', 'Club\r\nBcc: v@y.fr <x@y.fr>', '"Club" <x@y.fr>', 'Club <x@y.fr> <z@y.fr>', 'Club <a b@y.fr>', 'N@me <x@y.fr>']) {
       expect(() => loadConfig({ ...base, SMTP_HOST: 'h', MAIL_FROM: bad }), JSON.stringify(bad)).toThrow(/MAIL_FROM/);
     }
     expect(() => loadConfig({ ...base, SMTP_HOST: 'h', MAIL_FROM: 'a@b.fr', SMTP_PORT: '99999' })).toThrow(/SMTP_PORT/);
