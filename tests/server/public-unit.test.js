@@ -91,3 +91,27 @@ describe('maskUrl — casse', () => {
     expect(maskUrl('/API/PUBLIC/REGISTRATIONS/abc')).toBe('/API/PUBLIC/REGISTRATIONS/[redacted]');
   });
 });
+
+describe('GET /api/public/info et CONTACT_EMAIL', () => {
+  const info = async (extra) => request(createApp({ config: cfg(extra), pool: { query: async () => ({}) } })).get('/api/public/info');
+
+  it('CONTACT_EMAIL prioritaire, sinon ADMIN_EMAIL, sinon null ; no-store ; aucune autre donnée', async () => {
+    const admin = { ADMIN_EMAIL: 'admin@club.fr', ADMIN_PASSWORD: 'Zx9-sel-unique-12+' };
+    let res = await info({ ...admin, CONTACT_EMAIL: 'rgpd@club.fr' });
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ contact_email: 'rgpd@club.fr', consent_version: '2026-10' });
+    expect(res.headers['cache-control']).toBe('no-store');
+    expect((await info(admin)).body.contact_email).toBe('admin@club.fr');
+    expect((await info()).body.contact_email).toBeNull();
+  });
+  it('CONTACT_EMAIL invalide refusé au démarrage', () => {
+    expect(() => cfg({ CONTACT_EMAIL: 'pasunemail' })).toThrow(/CONTACT_EMAIL/);
+  });
+  it('lecture seule : POST → 404, rate-limit 60/min configurable → 429', async () => {
+    const app = createApp({ config: cfg({ RATE_LIMIT_VIEW_PER_IP_MIN: '2' }), pool: { query: async () => ({}) } });
+    expect((await request(app).post('/api/public/info').send({})).status).toBe(404);
+    await request(app).get('/api/public/info');
+    await request(app).get('/api/public/info');
+    expect((await request(app).get('/api/public/info')).status).toBe(429);
+  });
+});

@@ -10,6 +10,7 @@
 - **[ADDED]** anonymisation de `mailing_recipients.error` (en plus de `email` / `registration_id`) à la désinscription et à la purge
 - **[ADDED]** journalisation `registrations_viewed` sur `GET /api/activities/:id/registrations` (sans donnée personnelle)
 - **[ADDED]** migration `006_mailings` (tables `mailings`, `mailing_activities`, `mailing_recipients`) créée dès #6 pour l'anonymisation ; services d'envoi en #7
+- **[ADDED]** `GET /api/public/info` — `{ contact_email, consent_version }` ; variable `CONTACT_EMAIL` (défaut `ADMIN_EMAIL`)
 - **[ADDED]** `DELETE /api/activities/:id/registrations/:registrationId` — suppression + anonymisation par un responsable (audit security M1)
 - **[ADDED]** migration `007` — trigger `BEFORE DELETE` sur `registrations` : efface `email`/`error` des `mailing_recipients` liés (défense en profondeur)
 - **[CHANGED]** `409 already_registered` conservé (décision utilisateur) sous réserve du rate-limit renforcé

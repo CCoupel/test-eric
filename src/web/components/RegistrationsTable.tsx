@@ -51,7 +51,7 @@ export function RegistrationsTable({ registrations, onRemove }: Props) {
                       <button type="button" className="btn danger" data-testid="registration-remove-confirm" disabled={busy} onClick={() => void remove(r.id)}>
                         Oui, retirer et supprimer
                       </button>
-                      <button type="button" className="btn" disabled={busy} onClick={() => setConfirmId(null)}>Annuler</button>
+                      <button type="button" className="btn" data-testid="registration-remove-cancel" disabled={busy} onClick={() => setConfirmId(null)}>Annuler</button>
                     </div>
                   </div>
                 ) : (

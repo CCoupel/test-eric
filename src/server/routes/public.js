@@ -26,6 +26,12 @@ export function publicRoutes({ config, pool }) {
     `${ipKeyGenerator(req.ip)}|${SLUG_RE.test(req.params.slug) ? req.params.slug : 'invalid'}`,
   );
 
+  // Informations légales publiques (page de confidentialité) : lecture seule, aucune donnée personnelle d'inscrit.
+  router.get('/info', view, (_req, res) => {
+    res.set('Cache-Control', 'no-store');
+    res.json({ contact_email: config.contactEmail, consent_version: config.consentTextVersion });
+  });
+
   router.get('/activities/:slug', view, async (req, res) => {
     res.json(svc.toPublicActivity(await svc.findPublicActivity(pool, req.params.slug), config));
   });

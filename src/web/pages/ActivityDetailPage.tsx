@@ -137,7 +137,7 @@ export function ActivityDetailPage() {
       )}
 
       <h2>
-        Inscrits — {activity.registrations_count}
+        Inscrits — <span data-testid="activity-registrations-count">{activity.registrations_count}</span>
         {activity.capacity != null ? ` / ${activity.capacity} (${activity.remaining_places ?? 0} places restantes)` : ''}
       </h2>
       <RegistrationsTable registrations={registrations} onRemove={onRemoveRegistration} />

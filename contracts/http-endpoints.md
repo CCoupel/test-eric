@@ -105,6 +105,10 @@ Journalisé (`registration_removed_by_manager` : userId, activityId, registratio
 
 ## Inscription publique (issue #6)
 
+### GET /api/public/info
+**Auth** : Public — informations légales pour la page de confidentialité (lecture seule, `Cache-Control: no-store`, 60/min/IP).
+**Response 200** : `{ "contact_email": "string|null", "consent_version": "2026-10" }` (`contact_email` = `CONTACT_EMAIL`, sinon `ADMIN_EMAIL`, sinon `null`).
+
 ### GET /api/public/activities/:slug
 **Auth** : Public — fiche publique (sans données des inscrits).
 **Response 200** :
