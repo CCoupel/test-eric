@@ -10,16 +10,21 @@ import request from 'supertest';
 const REAL_DATABASE_URL = process.env.DATABASE_URL;
 const hasDb = Boolean(REAL_DATABASE_URL);
 
+const apps = [];
+
 async function loadApp() {
   vi.resetModules();
   const mod = await import('../../../../src/server/app.js');
   const factory = mod.createApp ?? mod.default;
-  return typeof factory === 'function' ? await factory() : factory;
+  const app = typeof factory === 'function' ? await factory() : factory;
+  apps.push(app);
+  return app;
 }
 
 describe('GET /health', () => {
-  afterEach(() => {
+  afterEach(async () => {
     process.env.DATABASE_URL = REAL_DATABASE_URL;
+    await Promise.all(apps.splice(0).map((a) => a.locals?.pool?.end()));
   });
 
   describe.skipIf(!hasDb)('base joignable', () => {
