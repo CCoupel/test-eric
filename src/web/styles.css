@@ -1,0 +1,5 @@
+:root { font-family: system-ui, sans-serif; color: #1f2933; background: #f7f8fa; }
+body { margin: 0; }
+.page { max-width: 48rem; margin: 0 auto; padding: 2rem 1rem; }
+h1 { margin-top: 0; }
+[role='alert'] { color: #b42318; }
