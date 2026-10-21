@@ -5,9 +5,10 @@ export function parseCookies(header = '') {
   const out = {};
   for (const part of header.split(';')) {
     const i = part.indexOf('=');
-    if (i < 1) continue;
+    const key = i < 0 ? '' : part.slice(0, i).trim();
+    if (!key) continue;
     try {
-      out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());
+      out[key] = decodeURIComponent(part.slice(i + 1).trim());
     } catch {
       /* cookie mal encodé : ignoré */
     }
