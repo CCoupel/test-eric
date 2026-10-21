@@ -26,7 +26,8 @@ export interface RegistrationInput {
   contact_name?: string;
   contact_email: string;
   consent: true;
-  website: string;
+  /** Honeypot : toujours vide pour un humain. */
+  hp_extra: string;
 }
 
 export interface PublicInfo {

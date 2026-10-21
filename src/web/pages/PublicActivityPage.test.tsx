@@ -65,7 +65,9 @@ describe('PublicActivityPage', () => {
     expect(hp).not.toHaveAttribute('name');
     expect(hp).toHaveValue('');
     expect(hp).toHaveAttribute('tabindex', '-1');
-    expect(screen.queryByText(/site web/i)).toBeNull();
+    expect(screen.queryByText(/site web|url|e-?mail|nom|tel/i, { selector: 'label[for="reg-hp"]' })).toBeNull();
+    expect(hp).toHaveAttribute('data-lpignore', 'true');
+    expect(hp).toHaveAttribute('autocomplete', 'off');
   });
 
   it('refuse sans consentement et n’appelle pas l’API', async () => {
@@ -90,7 +92,7 @@ describe('PublicActivityPage', () => {
     expect(screen.getByTestId('register-manage-url')).toHaveTextContent(/\/r\/A{43}/);
     const post = f.mock.calls.find(([, init]) => init?.method === 'POST');
     expect(JSON.parse(String(post?.[1]?.body))).toEqual({
-      participant_name: 'Léo Martin', is_minor: true, contact_name: 'Sophie Martin', contact_email: 'sophie@mail.fr', consent: true, website: '',
+      participant_name: 'Léo Martin', is_minor: true, contact_name: 'Sophie Martin', contact_email: 'sophie@mail.fr', consent: true, hp_extra: '',
     });
   });
 
@@ -106,7 +108,7 @@ describe('PublicActivityPage', () => {
     await screen.findByTestId('register-confirmation');
     const post = f.mock.calls.find(([, init]) => init?.method === 'POST');
     expect(JSON.parse(String(post?.[1]?.body))).not.toHaveProperty('contact_name');
-    expect(JSON.parse(String(post?.[1]?.body)).website).toBe('');
+    expect(JSON.parse(String(post?.[1]?.body)).hp_extra).toBe('');
   });
 
   it('affiche le doublon (409 already_registered)', async () => {
