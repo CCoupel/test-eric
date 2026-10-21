@@ -9,6 +9,9 @@ export class ConfigError extends Error {
   }
 }
 
+// Valeurs d'exemple / triviales refusées pour le mot de passe admin (le seed ne le change jamais ensuite).
+const WEAK_PASSWORD_PARTS = ['changeme', 'change-me', 'password', 'motdepasse', 'azerty', 'qwerty', '123456', 'example', 'exemple', 'admin'];
+
 const blank = (v) => v === undefined || v === null || String(v).trim() === '';
 
 export function loadConfig(env = process.env) {
@@ -41,6 +44,7 @@ export function loadConfig(env = process.env) {
   if (!sessionSecret && nodeEnv === 'test') sessionSecret = 'test-only-secret-test-only-secret-0123456789';
   if (!sessionSecret) problems.push('SESSION_SECRET est obligatoire');
   else if (sessionSecret.length < 32) problems.push('SESSION_SECRET doit faire au moins 32 caractères');
+  else if (new Set(sessionSecret).size < 10) problems.push('SESSION_SECRET trop peu varié (valeur d\'exemple ?)');
 
   // Compte initial (seed idempotent) : tout ou rien.
   const admin = { email: str('ADMIN_EMAIL'), password: str('ADMIN_PASSWORD'), name: str('ADMIN_NAME', 'Administrateur') };
@@ -48,6 +52,17 @@ export function loadConfig(env = process.env) {
   if (adminSet === 1) problems.push('ADMIN_EMAIL et ADMIN_PASSWORD doivent être fournis ensemble');
   if (admin.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(admin.email)) problems.push('ADMIN_EMAIL invalide');
   if (admin.password && admin.password.length < 12) problems.push('ADMIN_PASSWORD doit faire au moins 12 caractères');
+  else if (admin.password && Buffer.byteLength(admin.password) > 72) problems.push('ADMIN_PASSWORD: 72 octets maximum (limite de bcrypt)');
+  else if (admin.password && WEAK_PASSWORD_PARTS.some((w) => admin.password.toLowerCase().includes(w))) {
+    problems.push('ADMIN_PASSWORD est une valeur triviale ou d\'exemple');
+  }
+
+  // TRUST_PROXY : nombre de sauts de proxy de confiance (ex. 1), ou liste d'IP/CIDR/alias Express. `true` est refusé (IP usurpable).
+  const trustRaw = str('TRUST_PROXY', 'false');
+  let trustProxy = false;
+  if (trustRaw === 'true') problems.push('TRUST_PROXY=true refusé : indiquer le nombre de proxys (ex. 1) ou leurs adresses');
+  else if (/^\d+$/.test(trustRaw)) trustProxy = Number(trustRaw);
+  else if (trustRaw !== 'false') trustProxy = trustRaw;
 
   if (problems.length) throw new ConfigError(problems);
 
@@ -60,6 +75,7 @@ export function loadConfig(env = process.env) {
     https: new URL(baseUrl).protocol === 'https:',
     databaseUrl,
     sessionSecret,
+    trustProxy,
     admin: admin.email ? admin : null,
     consentTextVersion: str('CONSENT_TEXT_VERSION', '2026-10'),
   };

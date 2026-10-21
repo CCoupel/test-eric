@@ -13,7 +13,7 @@ export const hashPassword = (password) => bcrypt.hash(password, BCRYPT_COST);
 export const publicUser = (u) => ({ id: u.id, email: u.email, name: u.name, role: u.role });
 
 export function signSession(user, config) {
-  return jwt.sign({ sub: user.id, role: user.role }, config.sessionSecret, {
+  return jwt.sign({ sub: user.id, role: user.role, tv: user.token_version ?? 0 }, config.sessionSecret, {
     algorithm: 'HS256',
     expiresIn: `${SESSION_DAYS}d`,
   });
@@ -41,8 +41,13 @@ export async function authenticate(pool, email, password) {
 }
 
 export async function findUserById(pool, id) {
-  const { rows } = await pool.query('SELECT id, email, name, role FROM users WHERE id = $1', [id]);
+  const { rows } = await pool.query('SELECT id, email, name, role, token_version FROM users WHERE id = $1', [id]);
   return rows[0] ?? null;
+}
+
+/** Révoque toutes les sessions d'un utilisateur (les JWT émis avant portent un `tv` périmé). */
+export async function revokeSessions(pool, userId) {
+  await pool.query('UPDATE users SET token_version = token_version + 1 WHERE id = $1', [userId]);
 }
 
 /** Crée un compte ; retourne l'utilisateur public, ou `null` si l'e-mail existe déjà. */

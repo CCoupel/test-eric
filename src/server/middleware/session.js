@@ -24,23 +24,31 @@ export const requireSession = (config, pool) => async (req, _res, next) => {
   const payload = token && verifySession(token, config);
   if (!payload) throw unauthenticated();
   const user = await findUserById(pool, payload.sub);
-  if (!user) throw unauthenticated();
+  if (!user || payload.tv !== user.token_version) throw unauthenticated(); // compte supprimé ou session révoquée
   req.user = user;
   next();
 };
 
 const SAFE = new Set(['GET', 'HEAD', 'OPTIONS']);
 
-/** CSRF : sur les méthodes non sûres, un en-tête Origin présent doit être celui de l'application. */
-export const checkOrigin = (config) => (req, _res, next) => {
-  const origin = req.headers.origin;
-  if (SAFE.has(req.method) || !origin) return next();
-  let host;
-  try {
-    host = new URL(origin).host;
-  } catch {
-    throw new HttpError(403, 'forbidden', 'Origine refusée');
-  }
-  if (origin === new URL(config.baseUrl).origin || host === req.headers.host) return next();
-  throw new HttpError(403, 'forbidden', 'Origine refusée');
+/**
+ * CSRF sur les méthodes non sûres :
+ *  - `Origin` présent → doit être exactement celui de APP_BASE_URL (en dev, APP_BASE_URL = origine visible du navigateur) ;
+ *  - `Origin` absent → refusé si la requête porte le cookie de session ;
+ *  - `Sec-Fetch-Site: cross-site` → refusé.
+ */
+export const checkOrigin = (config) => {
+  const allowed = new URL(config.baseUrl).origin;
+  const forbidden = () => new HttpError(403, 'forbidden', 'Origine refusée');
+  return (req, _res, next) => {
+    if (SAFE.has(req.method)) return next();
+    if (req.headers['sec-fetch-site'] === 'cross-site') throw forbidden();
+    const origin = req.headers.origin;
+    if (origin) {
+      if (origin !== allowed) throw forbidden();
+    } else if (parseCookies(req.headers.cookie)[COOKIE_NAME]) {
+      throw forbidden();
+    }
+    next();
+  };
 };

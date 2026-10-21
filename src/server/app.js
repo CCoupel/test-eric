@@ -25,12 +25,13 @@ export const REDACT_PATHS = [
 ];
 
 // Sans argument : config lue dans l'environnement (DATABASE_URL…) et pool créé ; `app.locals.pool` permet de le fermer.
-export function createApp({ config = loadConfig(), pool = createPool(config), logger, loginLimit, webDir: webDirOpt = join(here, '../../dist/web') } = {}) {
+export function createApp({ config = loadConfig(), pool = createPool(config), logger, loginLimit, loginEmailLimit, webDir: webDirOpt = join(here, '../../dist/web') } = {}) {
   const webDir = resolve(webDirOpt); // absolu ; sendFile avec `root` évite le rejet des chemins contenant un segment « .xxx » (ex. .claude/worktrees)
   const log = logger ?? pino({ level: config.nodeEnv === 'test' ? 'silent' : 'info', redact: REDACT_PATHS });
   const app = express();
   app.locals.pool = pool;
   app.disable('x-powered-by');
+  app.set('trust proxy', config.trustProxy); // false par défaut ; TRUST_PROXY pour l'IP réelle derrière un reverse proxy
   // Hors HTTPS (ex. QUALIF http://localhost) : ni HSTS ni upgrade-insecure-requests, sinon le navigateur casse les assets.
   app.use(
     helmet(
@@ -42,8 +43,12 @@ export function createApp({ config = loadConfig(), pool = createPool(config), lo
   app.use(pinoHttp({ logger: log, redact: REDACT_PATHS, autoLogging: { ignore: (req) => req.url === '/health' } }));
   app.use(express.json({ limit: '100kb' }));
 
+  app.use('/api', (_req, res, next) => {
+    res.set('Cache-Control', 'no-store'); // données personnelles : jamais en cache partagé
+    next();
+  });
   app.use('/api', checkOrigin(config));
-  app.use('/api/auth', authRoutes({ config, pool, loginLimit }));
+  app.use('/api/auth', authRoutes({ config, pool, loginLimit, loginEmailLimit }));
   app.use('/api/activities', activityRoutes({ config, pool }));
 
   app.get('/health', async (_req, res) => {
