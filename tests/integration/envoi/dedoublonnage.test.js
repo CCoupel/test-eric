@@ -86,3 +86,36 @@ describe.skipIf(!hasDb)('Envois groupes — adresse partagee entre plusieurs ins
     expect((await request(ctx.app).get(`/api/public/unsubscribe/${token}`)).status).toBe(404);
   });
 });
+
+describe.skipIf(!hasDb)('Envois groupes — adultes de meme adresse (repro QUALIF 0.1.0.6)', () => {
+  let ctx;
+  let mailer;
+  let act;
+  beforeAll(async () => {
+    mailer = fakeMailer();
+    ctx = await setup({ mailer, env: { RATE_LIMIT_REGISTRATION_PER_IP_MIN: '1000', RATE_LIMIT_MAILING_PER_USER_10MIN: '1000' } });
+    act = await newActivity(ctx, { capacity: 20 });
+  });
+  afterAll(() => closeApp(ctx));
+
+  it('Alice Test + Bob + Alice Bis (meme e-mail, adultes) => 2 destinataires, 2 messages, 2 lignes', async () => {
+    const adult = (name, email) => register(ctx, act.public_slug, { participant_name: name, is_minor: false, contact_name: undefined, contact_email: email });
+    expect((await adult('Alice Test', 'alice@domaine.test')).status).toBe(201);
+    expect((await adult('Bob Test', 'bob@autre-domaine.test')).status).toBe(201);
+    expect((await adult('Alice Bis', 'alice@domaine.test')).status).toBe(201);
+    const preview = await ctx.api('get', `/api/mailings/recipients-preview?activity_ids=${act.id}`);
+    expect(preview.body.recipients_count).toBe(2);
+    mailer.sent.length = 0;
+    const res = await ctx.api('post', '/api/mailings').send(mailingBody([act.id], { subject: 'Adultes' }));
+    expect(res.body.mailing).toMatchObject({ recipients_count: 2, sent_count: 2 });
+    expect(mailer.bulk().map((b) => b.to).sort()).toEqual(['alice@domaine.test', 'bob@autre-domaine.test']);
+    expect((await ctx.api('get', `/api/mailings/${res.body.mailing.id}`)).body.recipients).toHaveLength(2);
+  });
+
+  it('deux adultes de meme e-mail ET meme nom (casse differente) dans une activite : 409 already_registered', async () => {
+    expect((await register(ctx, act.public_slug, { participant_name: 'Clara Dup', is_minor: false, contact_email: 'clara@domaine.test' })).status).toBe(201);
+    const dup = await register(ctx, act.public_slug, { participant_name: 'CLARA dup', is_minor: false, contact_email: 'Clara@Domaine.Test' });
+    expect(dup.status).toBe(409);
+    expect(dup.body.message).toContain('already_registered');
+  });
+});
