@@ -31,6 +31,10 @@ services:
       dockerfile: Dockerfile
     image: localhost/inscriptions-club:${APP_VERSION:-prod}
     restart: unless-stopped
+    # Arret : laisse 60 s pour terminer un envoi d'e-mails en cours (SIGTERM puis SIGKILL).
+    # docker compose et podman-compose >= 1.0.6 l'appliquent sur down/stop/restart/up --force-recreate
+    # (podman stop -t 60) ; un `podman stop` direct utilise 10 s : passer `-t 60`.
+    stop_grace_period: 60s
     depends_on:
       - db
     env_file:
