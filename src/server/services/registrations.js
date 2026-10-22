@@ -179,7 +179,18 @@ export async function getByToken(pool, config, token) {
  */
 export async function anonymizeRecipients(db, registrationIds) {
   if (!registrationIds.length) return 0;
-  const r = await db.query('UPDATE mailing_recipients SET email = NULL, error = NULL, unsubscribe_token_hash = NULL, registration_id = NULL WHERE registration_id = ANY($1)', [registrationIds]);
+  // Un destinataire = une adresse : effacé seulement si AUCUNE autre inscription de cette adresse ne subsiste dans les activités de l'envoi
+  // (supprimer un seul enfant ne doit pas invalider le lien de désabonnement du parent). Les lignes encore valides perdent leur lien
+  // `registration_id` (FK SET NULL) mais gardent l'adresse ; elles seront effacées avec la dernière inscription de l'adresse.
+  const r = await db.query(
+    `UPDATE mailing_recipients mr
+        SET email = NULL, error = NULL, unsubscribe_token_hash = NULL, registration_id = NULL
+      WHERE (mr.registration_id = ANY($1) OR mr.email IN (SELECT contact_email FROM registrations WHERE id = ANY($1)))
+        AND NOT EXISTS (
+          SELECT 1 FROM registrations r2 JOIN mailing_activities ma ON ma.activity_id = r2.activity_id
+           WHERE ma.mailing_id = mr.mailing_id AND r2.contact_email = mr.email AND NOT (r2.id = ANY($1)))`,
+    [registrationIds],
+  );
   return r.rowCount;
 }
 

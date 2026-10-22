@@ -2,6 +2,10 @@
 
 > Changements de contrats (API, schemas) : `BREAKING` | `CHANGED` | `ADDED`. Lu par le CDP au GATE 2.
 
+## [20261022c] — Destinataires par adresse (migration 009)
+
+- **[CHANGED]** anonymisation de `mailing_recipients` : un destinataire = une adresse ; effacé (`email`, `error`, hash de désabonnement) seulement quand plus aucune inscription de cette adresse ne subsiste dans les activités de l'envoi (supprimer un enfant n'invalide plus le lien de désabonnement du parent)
+
 ## [20261022b] — MAIL_FROM sans SMTP
 
 - **[CHANGED]** `MAIL_FROM` seul (sans `SMTP_HOST`) est accepté : transport `stub`, expéditeur exposé par `GET /api/mail/status` ; `SMTP_HOST` exige toujours `MAIL_FROM` (incident QUALIF : démarrage refusé)
