@@ -125,7 +125,7 @@ Les fichiers `.env`, `qualif.env` et `prod.env` ne sont jamais commités. Les fi
 
 1. **Avant PROD — `TRUST_PROXY`** : renseigner le nombre réel de proxys (ex. `1`) derrière un reverse proxy TLS, et vérifier que le proxy
    écrase `X-Forwarded-For` entrant. Le serveur émet un avertissement au démarrage si la production est en HTTPS sans `TRUST_PROXY`.
-   Les exemples `qualif.env.example` et `prod.env.example` ont encore `TRUST_PROXY=0` (à corriger avant PROD).
+   `prod.env.example` laisse `TRUST_PROXY` vide : la valeur réelle est obligatoire et contrôlée au DEPLOY PROD. `qualif.env.example` garde `0` (QUALIF locale sans proxy).
 2. **Avant PROD — journaux du reverse proxy** : son journal d'accès contient `/r/<token>`. Masquer le chemin ou le jeton, et limiter la rétention à 30 jours au plus.
    Cette mesure relève du déploiement, pas de l'application.
 3. **Avant PROD — rétention des IP** : 30 jours au plus dans les journaux de l'application.
@@ -144,10 +144,10 @@ Les fichiers `.env`, `qualif.env` et `prod.env` ne sont jamais commités. Les fi
 | 2 | **DKIM** : le relais signe les en-têtes `List-Unsubscribe` et `List-Unsubscribe-Post`. Vérifier avec un message réel. | oui |
 | 3 | **SPF** du domaine de `MAIL_FROM` inclut le serveur SMTP. **DMARC** publié (`p=none` puis `quarantine`). Alignement du `From`. | oui |
 | 4 | `SMTP_REQUIRE_TLS` non désactivé ; `SMTP_USER` et `SMTP_PASS` dans un coffre de secrets, jamais dans le dépôt. Compte SMTP dédié, privilège minimal. | oui |
-| 5 | `TRUST_PROXY` renseigné avec le nombre réel de proxys (ex. `1`). Les fichiers `qualif.env.example` et `prod.env.example` ont encore `TRUST_PROXY=0` : à corriger. Vérifier que le proxy écrase `X-Forwarded-For`. | oui |
+| 5 | `TRUST_PROXY` renseigné avec le nombre réel de proxys (ex. `1`) dans `prod.env` : `prod.env.example` le laisse vide, la valeur est contrôlée au DEPLOY PROD. `qualif.env.example` garde `0` (QUALIF locale sans proxy). Vérifier que le proxy écrase `X-Forwarded-For`. | oui |
 | 6 | Journal d'accès du reverse proxy : masquer `/r/<token>`, `/u/<token>` et `/api/public/*/<token>`, rétention 30 jours au plus. | oui |
 | 7 | Journaux de l'application : adresses IP en clair dans les événements d'authentification et d'inscription. Rétention 30 jours au plus. | non |
-| 8 | `stop_grace_period: 60s` dans `docker-compose.prod.yml` pour laisser un envoi se clore à l'arrêt. | non |
+| 8 | `stop_grace_period: 60s` présent dans `docker-compose.prod.yml` et `docker-compose.qualif.yml`, pour laisser un envoi se clore à l'arrêt. Vérifier qu'il est appliqué à la création du conteneur. | non |
 | 9 | `CONTACT_EMAIL` renseigné (adresse de contact réelle, jamais `ADMIN_EMAIL`). | oui |
 | 10 | `MAIL_FROM` validé au démarrage ; pas de mode stub en production (avertissement au démarrage à lire). | oui |
 | 11 | `ADMIN_PASSWORD` non trivial, `SESSION_SECRET` ≥ 32 caractères. Le compte initial n'est pas le compte de production définitif. | oui |

@@ -278,6 +278,7 @@ Commandes (agents du teamleader) :
 - `/build` : compile la version candidate.
 - `/publish qualif` puis `/deploy qualif` : publie puis installe l'artefact sur QUALIF.
 - Procédures détaillées : `.claude/agents/environments/`.
+- Procédures PROD : `.claude/agents/environments/publish.prod.md` et `deploy.prod.md`. Les décisions P1 à P7 (hôte, domaine, TLS et proxy, SMTP, DNS e-mail, contact RGPD, sauvegardes) sont à prendre **avant le premier déploiement PROD**.
 
 ### Fichier `qualif.env`
 
