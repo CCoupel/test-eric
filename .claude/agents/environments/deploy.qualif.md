@@ -73,7 +73,7 @@ wait_pg docker-compose.qualif.yml db "$PG_USER" "$PG_DB" 90 || exit 1
 # app : recreee sur la nouvelle image ; migrations au demarrage. Avec podman-compose, des messages
 # « no such container » / « no such volume » au premier deploiement sont sans consequence :
 # le verdict est le smoke /health ci-dessous.
-compose -f docker-compose.qualif.yml up -d --force-recreate --no-deps app
+compose_up_app docker-compose.qualif.yml
 
 # 3. Smoke tests
 wait_http "http://localhost:$APP_PORT/health" 90 || exit 1
@@ -104,7 +104,7 @@ dossier est conserve dans `deploy.previous/` :
 ```bash
 cd "$REPO_ROOT" || exit 1; source scripts/container-env.sh
 cd "build/qualif_v$DIR_VERSION/deploy.previous" || exit 1
-compose -f docker-compose.qualif.yml up -d --force-recreate --no-deps app
+compose_up_app docker-compose.qualif.yml
 ```
 
 Les migrations sont uniquement ascendantes : un rollback apres une migration incompatible exige

@@ -55,6 +55,20 @@ export CONTAINER_CLI COMPOSE_CMD
 # shellcheck disable=SC2086 # COMPOSE_CMD contient volontairement plusieurs mots
 compose() { $COMPOSE_CMD "$@"; }
 
+# compose_up_app <fichier-compose> : (re)cree le service `app` sans toucher a `db`.
+# podman-compose 1.0.6 n'applique stop_grace_period qu'a down/stop (pas a la creation : le
+# conteneur garderait StopTimeout=10) -> --stop-timeout explicite, valeur lue dans le compose
+# (source unique). docker compose l'applique nativement.
+compose_up_app() {
+  local file=$1 grace
+  grace=$(grep -m1 -E '^[[:space:]]*stop_grace_period:[[:space:]]*[0-9]+s' "$file" | grep -oE '[0-9]+' || true)
+  if [ "$COMPOSE_CMD" = podman-compose ] && [ -n "$grace" ]; then
+    compose --podman-run-args="--stop-timeout $grace" -f "$file" up -d --force-recreate --no-deps app
+  else
+    compose -f "$file" up -d --force-recreate --no-deps app
+  fi
+}
+
 # wait_pg <fichier-compose> <service> <user> <base> [timeout_s] : attend que Postgres accepte
 # les connexions (pg_isready dans le conteneur), independamment du moteur.
 wait_pg() {
