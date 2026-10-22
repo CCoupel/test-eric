@@ -96,7 +96,8 @@ export function loadConfig(env = process.env) {
   if (!['true', 'false'].includes(smtpSecureRaw)) problems.push('SMTP_SECURE doit valoir true ou false');
   const smtpPort = Number(str('SMTP_PORT', smtpSecureRaw === 'true' ? '465' : '587'));
   if (!Number.isInteger(smtpPort) || smtpPort < 1 || smtpPort > 65535) problems.push('SMTP_PORT doit être un port valide');
-  if (Boolean(smtpHost) !== Boolean(mailFrom)) problems.push('SMTP_HOST et MAIL_FROM doivent être fournis ensemble');
+  // MAIL_FROM seul est accepté (transport stub : affichage de l'expéditeur et journaux) ; SMTP_HOST exige MAIL_FROM.
+  if (smtpHost && !mailFrom) problems.push('MAIL_FROM est obligatoire dès que SMTP_HOST est fourni');
   if (Boolean(smtpUser) !== Boolean(smtpPass)) problems.push('SMTP_USER et SMTP_PASS doivent être fournis ensemble');
   if (mailFrom && !isSingleSender(mailFrom)) {
     problems.push('MAIL_FROM doit être une adresse unique (« a@b.fr » ou « Nom <a@b.fr> », nom sans virgule ni caractère de contrôle)');

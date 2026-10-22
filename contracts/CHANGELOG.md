@@ -2,6 +2,10 @@
 
 > Changements de contrats (API, schemas) : `BREAKING` | `CHANGED` | `ADDED`. Lu par le CDP au GATE 2.
 
+## [20261022b] — MAIL_FROM sans SMTP
+
+- **[CHANGED]** `MAIL_FROM` seul (sans `SMTP_HOST`) est accepté : transport `stub`, expéditeur exposé par `GET /api/mail/status` ; `SMTP_HOST` exige toujours `MAIL_FROM` (incident QUALIF : démarrage refusé)
+
 ## [20261022] — Alignement contrats / code (revue doc)
 
 - **[CHANGED]** transport `stub` : le journal ne contient plus le contenu des messages (ni adresses) mais le seul sujet tronqué à 40 caractères (exigence security E11, données personnelles)

@@ -8,6 +8,7 @@ const base = { DATABASE_URL: 'postgres://x@localhost/x', NODE_ENV: 'test' };
 describe('config SMTP', () => {
   it('stub par défaut ; smtp si SMTP_HOST + MAIL_FROM ; mot de passe jamais exposé par transport/from', () => {
     expect(loadConfig(base).mail).toEqual({ transport: 'stub', from: null });
+    expect(loadConfig({ ...base, MAIL_FROM: 'Club <no-reply@club.example>' }).mail).toEqual({ transport: 'stub', from: 'Club <no-reply@club.example>' }); // MAIL_FROM seul : stub
     const c = loadConfig({ ...base, SMTP_HOST: 'smtp.example', MAIL_FROM: 'Club <no-reply@club.example>', SMTP_USER: 'u', SMTP_PASS: 'p' });
     expect(c.mail).toMatchObject({ transport: 'smtp', host: 'smtp.example', port: 587, secure: false, from: 'Club <no-reply@club.example>' });
     expect(loadConfig({ ...base, SMTP_HOST: 'h', MAIL_FROM: 'a@b.fr', SMTP_SECURE: 'true' }).mail.port).toBe(465);
@@ -16,8 +17,7 @@ describe('config SMTP', () => {
     }
   });
   it('refuse : paire incomplète, MAIL_FROM multiple ou avec CR/LF, port ou secure invalides, hôte douteux', () => {
-    expect(() => loadConfig({ ...base, SMTP_HOST: 'h' })).toThrow(/ensemble/);
-    expect(() => loadConfig({ ...base, MAIL_FROM: 'a@b.fr' })).toThrow(/ensemble/);
+    expect(() => loadConfig({ ...base, SMTP_HOST: 'h' })).toThrow(/MAIL_FROM est obligatoire/);
     expect(() => loadConfig({ ...base, SMTP_HOST: 'h', MAIL_FROM: 'a@b.fr', SMTP_USER: 'u' })).toThrow(/SMTP_USER et SMTP_PASS/);
     for (const bad of ['a@b.fr, c@d.fr', 'a@b.fr\nBcc: x@y.fr', 'pas une adresse', '<a@b.fr> <c@d.fr>', 'A, B <x@y.fr>', 'A; B <x@y.fr>', 'Club\r\nBcc: v@y.fr <x@y.fr>', '"Club" <x@y.fr>', 'Club <x@y.fr> <z@y.fr>', 'Club <a b@y.fr>', 'N@me <x@y.fr>']) {
       expect(() => loadConfig({ ...base, SMTP_HOST: 'h', MAIL_FROM: bad }), JSON.stringify(bad)).toThrow(/MAIL_FROM/);

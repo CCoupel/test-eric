@@ -12,7 +12,6 @@ describe.skipIf(!hasDb)('Mailing - configuration SMTP', () => {
 
   it.each([
     ['SMTP_HOST sans MAIL_FROM', { SMTP_HOST: '127.0.0.1' }],
-    ['MAIL_FROM sans SMTP_HOST', { MAIL_FROM }],
     ['SMTP_USER sans SMTP_PASS', { SMTP_HOST: '127.0.0.1', MAIL_FROM, SMTP_USER: 'robot' }],
     ['SMTP_PASS sans SMTP_USER', { SMTP_HOST: '127.0.0.1', MAIL_FROM, SMTP_PASS: SENTINELLE_PASS }],
     ['MAIL_FROM avec retour a la ligne', { SMTP_HOST: '127.0.0.1', MAIL_FROM: 'a@club.test\r\nBcc: pirate@evil.example' }],
@@ -29,6 +28,12 @@ describe.skipIf(!hasDb)('Mailing - configuration SMTP', () => {
     const stub = await makeApp({ env: mailEnv() });
     ouverts.push(stub);
     expect(smtp.app.locals.pool).toBeDefined();
+  });
+
+  it('MAIL_FROM seul (sans SMTP_HOST) : demarrage accepte en mode stub, expediteur expose par /api/mail/status', async () => {
+    const ctx = await setup({ env: mailEnv({ MAIL_FROM }) });
+    ouverts.push(ctx);
+    expect((await ctx.api('get', '/api/mail/status')).body).toEqual({ transport: 'stub', from: MAIL_FROM });
   });
 
   it('identifiants SMTP : jamais renvoyes par /api/mail/status ni presents dans les reponses', async () => {
