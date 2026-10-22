@@ -121,3 +121,23 @@ describe('GET /api/public/info et CONTACT_EMAIL', () => {
     expect((await request(app).get('/api/public/info')).status).toBe(429);
   });
 });
+
+describe('limiteur du désabonnement', () => {
+  const token = 'A'.repeat(43);
+  const app = (extra) => createApp({ config: cfg(extra), pool: { query: async () => ({ rows: [] }) } });
+
+  it('défaut 60/min/IP ; surcharge par RATE_LIMIT_UNSUBSCRIBE_PER_IP_MIN ; 429 au-delà (GET et POST partagent le compteur)', async () => {
+    expect(cfg().mailLimits.unsubscribePerIpPerMin).toBe(60);
+    const a = app({ RATE_LIMIT_UNSUBSCRIBE_PER_IP_MIN: '2' });
+    expect((await request(a).get(`/api/public/unsubscribe/${token}`)).status).toBe(404);
+    expect((await request(a).get(`/api/public/unsubscribe/${token}`)).status).toBe(404);
+    const res = await request(a).post(`/api/public/unsubscribe/${token}`);
+    expect(res.status).toBe(429);
+    expect(res.body.error).toBe('rate_limited');
+  });
+  it('plus indulgent que les tokens de gestion (30/min), mais borné', () => {
+    const lim = cfg().mailLimits.unsubscribePerIpPerMin;
+    expect(lim).toBeGreaterThan(cfg().publicLimits.tokenPerIpPerMin);
+    expect(lim).toBeLessThanOrEqual(100);
+  });
+});

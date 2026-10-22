@@ -41,7 +41,7 @@ describe('config SMTP', () => {
   });
   it('limites d’envoi : défauts et validation', () => {
     expect(loadConfig(base).mailLimits).toEqual({
-      perUserPer10Min: 5, maxRecipients: 500, syncMaxRecipients: 100, confirmationPerAddressPerHour: 3, confirmationGlobalPerHour: 300, unsubscribePerIpPerMin: 300,
+      perUserPer10Min: 5, maxRecipients: 500, syncMaxRecipients: 100, confirmationPerAddressPerHour: 3, confirmationGlobalPerHour: 300, unsubscribePerIpPerMin: 60,
     });
     expect(() => loadConfig({ ...base, MAILING_MAX_RECIPIENTS: '0' })).toThrow(/MAILING_MAX_RECIPIENTS/);
   });

@@ -116,7 +116,7 @@ export function loadConfig(env = process.env) {
     syncMaxRecipients: intVar('MAILING_SYNC_MAX_RECIPIENTS', 100, 5000),
     confirmationPerAddressPerHour: intVar('RATE_LIMIT_CONFIRMATION_PER_ADDRESS_HOUR', 3),
     confirmationGlobalPerHour: intVar('RATE_LIMIT_CONFIRMATION_GLOBAL_HOUR', 300),
-    unsubscribePerIpPerMin: intVar('RATE_LIMIT_UNSUBSCRIBE_PER_IP_MIN', 300),
+    unsubscribePerIpPerMin: intVar('RATE_LIMIT_UNSUBSCRIBE_PER_IP_MIN', 60),
   };
 
   // TRUST_PROXY : nombre de sauts de proxy de confiance (ex. 1), ou liste d'IP/CIDR/alias Express. `true` est refusé (IP usurpable).

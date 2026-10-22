@@ -210,10 +210,10 @@ Le lien `/u/<token>` figure dans chaque message ; le token est propre au message
 Effet = **désinscription** des activités de cet envoi (suppression physique + anonymisation, comme `/r/:token`) pour l'adresse concernée.
 
 ### GET /api/public/unsubscribe/:token
-**Auth** : Public (non mutant, 30/min/IP, `no-store`) — **Response 200** : `{ "activities": [ { "title", "starts_at" } ] }` — **Errors** : 404 uniforme (inconnu, malformé, déjà utilisé, inscription supprimée).
+**Auth** : Public (non mutant, 60/min/IP — `RATE_LIMIT_UNSUBSCRIBE_PER_IP_MIN`, `no-store`) — **Response 200** : `{ "activities": [ { "title", "starts_at" } ] }` — **Errors** : 404 uniforme (inconnu, malformé, déjà utilisé, inscription supprimée).
 
 ### POST /api/public/unsubscribe/:token
-**Auth** : Public (30/min/IP ; `Origin` vérifié s'il est présent) — **Response 204** — **Errors** : 404 uniforme. Accepte le POST « one-click » des clients
+**Auth** : Public (60/min/IP — `RATE_LIMIT_UNSUBSCRIBE_PER_IP_MIN` ; `Origin` vérifié s'il est présent) — **Response 204** — **Errors** : 404 uniforme. Accepte le POST « one-click » des clients
 e-mail (RFC 8058, corps `List-Unsubscribe=One-Click`, sans `Origin` ni cookie).
 
 ---

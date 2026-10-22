@@ -2,6 +2,11 @@
 
 > Changements de contrats (API, schemas) : `BREAKING` | `CHANGED` | `ADDED`. Lu par le CDP au GATE 2.
 
+## [20261022] — Alignement contrats / code (revue doc)
+
+- **[CHANGED]** transport `stub` : le journal ne contient plus le contenu des messages (ni adresses) mais le seul sujet tronqué à 40 caractères (exigence security E11, données personnelles)
+- **[CHANGED]** `GET|POST /api/public/unsubscribe/:token` : limite `RATE_LIMIT_UNSUBSCRIBE_PER_IP_MIN`, défaut **60/min/IP** (et non 30 comme les tokens de gestion) ; justification : les POST one-click des fournisseurs de messagerie partagent leurs IP
+
 ## [20261021e] — E-mails groupés (issue #7, exigences security E1-E14 + désabonnement)
 
 - **[ADDED]** `POST /api/mailings` — `202` (envoi en tâche de fond) au-delà de 100 destinataires ; `409 too_many_recipients | mailing_in_progress | duplicate_mailing` ; `429 rate_limited`
