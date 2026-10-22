@@ -288,6 +288,28 @@ Variables obligatoires : `APP_PORT`, `APP_BASE_URL`, `POSTGRES_PASSWORD`, `SESSI
 `ADMIN_PASSWORD`, `ADMIN_NAME`. Les variables `POSTGRES_USER` et `POSTGRES_DB` sont optionnelles (défaut `club`).
 `DATABASE_URL` n'est pas à renseigner : elle est dérivée par le fichier compose.
 
+## Site marketing
+
+Le site de présentation du projet est hébergé par **GitHub Pages** :
+**https://ccoupel.github.io/test-eric/**
+
+- **Source** : la branche orpheline `gh-pages`. Elle n'a aucun historique commun avec le code : ne jamais la fusionner dans `main` ni dans `milestone/*`.
+- **Travail local** : un worktree `MARKETING/` à la racine du projet, sur la branche `gh-pages`. Il est gitignoré et ne se commite jamais sur la branche de code.
+  Création si elle manque :
+
+  ```bash
+  git fetch origin gh-pages && git worktree add MARKETING gh-pages
+  ```
+
+- **Contenu** : produit par la commande `/marketing`, dans la direction définie au cadrage (`docs/CADRAGE.md`, §7 : arts martiaux, public jeune).
+- **Publication** : un `git push origin gh-pages` depuis `MARKETING/` suffit. GitHub Pages reconstruit le site automatiquement (environ 20 à 40 secondes).
+  Le CDN peut servir l'ancienne version pendant quelques minutes après la fin du build : recharger sans cache avant de conclure.
+- **Aucun lien avec le build applicatif** : aucun workflow de `ci-branch.yml` ni de `release.yml` ne s'exécute sur `gh-pages`.
+- **Ce que le site ne contient jamais** : aucune donnée personnelle de participant, aucun secret, aucun identifiant. Le site ne fait que présenter le projet.
+- **Lien vers l'application** : à ajouter quand l'URL de production sera connue.
+
+Sur la branche `gh-pages`, garder le fichier `.nojekyll` : sans lui, GitHub Pages ignore les fichiers et dossiers qui commencent par `_`.
+
 ## Conventions
 
 - **Branches** : `milestone/vX.Y.Z` pour le travail d'un milestone ; jamais de travail direct sur `main`.

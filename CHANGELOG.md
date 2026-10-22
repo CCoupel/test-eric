@@ -55,6 +55,7 @@ Socle du milestone v0.1.0 (non publié à ce stade).
 - Purge de l'historique des envois avec les inscriptions (`RETENTION_MONTHS`).
 - Variables `SMTP_*`, `MAIL_FROM`, `CONTACT_EMAIL`, `MAILING_*`, `SMTP_REQUIRE_TLS` et limites d'envoi (`RATE_LIMIT_MAILING_*`, `RATE_LIMIT_CONFIRMATION_*`, `RATE_LIMIT_UNSUBSCRIBE_*`).
 - Documentation : `docs/EMAIL.md` (configuration, fournisseurs, délivrabilité, dépannage).
+- Site marketing sur GitHub Pages (branche `gh-pages`, page placeholder), publié à l'adresse https://ccoupel.github.io/test-eric/ (#8).
 
 ### Security
 - Jeton de gestion d'inscription : 256 bits, stocké haché (SHA-256) seul ; réponse identique pour un jeton inconnu, invalide ou supprimé.
