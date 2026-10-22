@@ -93,9 +93,23 @@ Variables principales :
 
 Le serveur **refuse de démarrer** si une de ces règles n'est pas respectée. Les valeurs d'exemple sont refusées.
 
-Les variables `SMTP_*` et `MAIL_FROM` configurent l'envoi des e-mails groupés. Sans `SMTP_HOST`, le serveur reste en mode **stub** :
-aucun e-mail n'est envoyé. Configuration, exemples de fournisseurs, délivrabilité (SPF, DKIM, DMARC) et dépannage :
-voir [`docs/EMAIL.md`](docs/EMAIL.md).
+### E-mails groupés
+
+| Variable | Rôle |
+|----------|------|
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` | Serveur SMTP (587 + `SMTP_SECURE=false`, ou 465 + `true`). Vide = mode **stub** : aucun e-mail n'est envoyé |
+| `SMTP_USER` / `SMTP_PASS` | Identifiants SMTP (ensemble). Le TLS est alors exigé. `SMTP_PASS` n'est jamais journalisé |
+| `SMTP_REQUIRE_TLS` | `true` par défaut hors hôte local |
+| `MAIL_FROM` | Expéditeur, adresse unique (`adresse` ou `Nom <adresse>`). Obligatoire avec `SMTP_HOST` |
+| `CONTACT_EMAIL` | Contact du pied de page des e-mails groupés (jamais `ADMIN_EMAIL`) |
+| `MAILING_MAX_RECIPIENTS` | Plafond de destinataires par envoi (défaut `500`) |
+| `MAILING_SYNC_MAX_RECIPIENTS` | Au-delà, l'envoi passe en tâche de fond (défaut `100`) |
+| `RATE_LIMIT_MAILING_PER_USER_10MIN` | Envois par responsable et par 10 minutes (défaut `5`) |
+| `RATE_LIMIT_CONFIRMATION_PER_ADDRESS_HOUR` / `RATE_LIMIT_CONFIRMATION_GLOBAL_HOUR` | Confirmations d'inscription par adresse (`3`) et au total (`300`) par heure |
+| `RATE_LIMIT_UNSUBSCRIBE_PER_IP_MIN` | Accès au désabonnement par IP et par minute (défaut `300`) |
+
+Sans `SMTP_HOST`, aucun e-mail ne part : le bandeau « simulé » s'affiche dans l'interface. Configuration, exemples de fournisseurs,
+délivrabilité (SPF, DKIM, DMARC) et dépannage : voir [`docs/EMAIL.md`](docs/EMAIL.md).
 
 ## Comptes responsables
 
@@ -139,6 +153,12 @@ Résumé. Le modèle de menace complet est dans [`docs/SECURITY.md`](docs/SECURI
 4. Copier le **lien public** de l'activité, au format `/a/<slug>`, et le partager.
 5. Suivre la liste des inscrits depuis la fiche de l'activité. Chaque consultation est journalisée (qui, quelle activité, combien d'inscrits).
 6. **Retirer un inscrit** : bouton de suppression sur sa ligne, avec confirmation. Ses données sont supprimées, pas seulement masquées.
+7. **Envoyer un e-mail groupé** : menu **E-mails → Composer**. Cocher les activités, vérifier le nombre de destinataires dans l'aperçu,
+   saisir l'objet et le message (texte brut), puis envoyer. Un message part par destinataire, sans copie visible des autres.
+   - Un seul envoi à la fois ; 5 envois maximum par 10 minutes ; 500 destinataires maximum par envoi.
+   - Un même envoi (même objet, même message, mêmes activités) ne peut pas être relancé dans les 5 minutes.
+8. **Suivre les envois** : **E-mails → Historique**. Chaque envoi affiche son statut (Envoyé, Partiel, Échec, Simulé) et, pour chaque destinataire,
+   `sent`, `failed` ou `stubbed`. Au-delà de 100 destinataires, l'envoi continue en arrière-plan : le détail se met à jour seul.
 
 Après une déconnexion, toute session ouverte sur le compte est invalide.
 
@@ -151,6 +171,9 @@ Après une déconnexion, toute session ouverte sur le compte est invalide.
 3. Cocher le **consentement** (non pré-coché). Le texte, sa durée de conservation et la version acceptée sont affichés.
 4. Valider. Une page de confirmation affiche le **lien de gestion** `/r/<token>`. Il n'est affiché **qu'une fois** : le copier et le conserver.
 5. Pour se désinscrire, ouvrir le lien de gestion et confirmer. Les données sont supprimées.
+6. **Désabonnement depuis un e-mail groupé** : chaque message du club contient un lien « Se désinscrire ». Le bouton « Se désabonner » de la messagerie
+   **désinscrit en un clic et supprime les données** de cette adresse pour les activités concernées par l'envoi. Ce n'est pas une simple
+   mise en sommeil des e-mails. La page `/u/<token>` liste ces activités, et ne supprime rien tant qu'on n'a pas confirmé.
 
 Impossible de s'inscrire une fois l'activité commencée, ou si elle est complète. Un même e-mail ne peut pas inscrire deux fois le même nom à une activité ; un parent peut inscrire plusieurs enfants.
 Un participant qui a perdu son lien de gestion doit demander au responsable de le retirer de la liste.
@@ -158,6 +181,10 @@ Un participant qui a perdu son lien de gestion doit demander au responsable de l
 Une page **Confidentialité** (`/confidentialite`) décrit le traitement des données.
 
 ## Exploitation (données personnelles)
+
+- **Historique des envois** : purgé avec les inscriptions, selon `RETENTION_MONTHS` (même commande `npm run data:purge`).
+- **Arrêt du serveur pendant un envoi** : l'envoi n'est jamais repris ; il est clos en `partial` ou `failed` au redémarrage.
+  Prévoir `stop_grace_period: 60s` dans le fichier compose (QUALIF et PROD).
 
 - **Purge** : les inscriptions sont supprimées automatiquement `RETENTION_MONTHS` mois après la date de l'activité.
   La purge s'exécute au démarrage du serveur, puis toutes les 24 heures. Elle peut aussi être lancée à la main :

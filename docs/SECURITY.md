@@ -35,7 +35,28 @@
 | En-têtes navigateur | helmet ; HSTS et `upgrade-insecure-requests` selon HTTPS. |
 | Mauvaise IP derrière un proxy | `TRUST_PROXY` explicite (défaut : aucun). `true` refusé. Les URL (`manage_url`, `public_url`) sont construites depuis `APP_BASE_URL`, jamais depuis `Host`. |
 | Mot de passe initial faible | `user:create` génère un mot de passe (120 bits, CSPRNG), affiché une fois, jamais en argument ni dans les logs. |
+| Injection d'en-têtes e-mail | `From` toujours `MAIL_FROM` (validé au démarrage). Schémas `strictObject` : `from`, `to`, `cc`, `bcc`, `headers` refusés (400). Sujet sans caractère de contrôle, corps sans caractère de contrôle. `To` doit être une adresse simple. |
+| Injection HTML dans les e-mails | Corps échappé (`& < > " '`) puis converti en paragraphes. Aucun HTML client conservé, aucune autolinkification. Tests : `<script>`, `<img onerror>`, `javascript:`, CRLF. |
+| Fuite d'adresses entre destinataires | Un message par destinataire, `To` unique, pas de `Bcc` ni de `Cc`. L'aperçu ne renvoie que des compteurs. |
+| Fuite de jetons ou d'adresses dans les journaux d'envoi | Logs d'événements sans adresse, sans corps, sans jeton, sans objet d'erreur Nodemailer (qui peut contenir l'hôte). Transport stub : sujet tronqué à 40 caractères seulement. |
+| Vol des identifiants SMTP | `SMTP_PASS` jamais journalisé ni renvoyé. `/api/mail/status` ne renvoie que le mode et l'expéditeur. Transport SMTP seul (pas de sendmail ni shell). |
+| Interception SMTP | TLS vérifié (`rejectUnauthorized`), TLS imposé dès qu'un identifiant est fourni (`SMTP_REQUIRE_TLS`). Timeouts 10 s. |
+| Relais de spam via le formulaire public | Confirmations plafonnées (3/h par adresse, 300/h au total). Honeypot sans e-mail. Limites LOT-3 sur l'inscription. Pas de double opt-in (accepté). |
+| Envois en rafale ou doublons | Un seul envoi à la fois (verrou). Anti-doublon : même envoi en moins de 5 minutes refusé. 500 destinataires maximum. 5 envois par 10 minutes et par responsable. |
+| Désabonnement forgé ou rejoué | Jeton de 256 bits par destinataire et par message, stocké haché, usage unique. Réponse uniforme (404) si inconnu ou utilisé. Limite par IP dédiée (300/min). |
+| Lien de gestion dans un e-mail groupé | Interdit : le jeton de gestion n'est stocké que haché, et un e-mail groupé ne le contient jamais. Seul l'e-mail de confirmation le contient, sans être journalisé ni stocké. |
+| Dépannage et erreurs de transport | Erreurs réduites à un code grossier (`timeout`, `connection`, `auth`, `rejected`, `other`). Aucune adresse, aucun nom d'hôte dans l'historique. |
 | Dépendances vulnérables | `npm audit --audit-level=high` : 0 vulnérabilité à la dernière revue. Exécuté par la CI. |
+
+## E-mails groupés
+
+- **Expéditeur** : toujours `MAIL_FROM`, adresse unique validée au démarrage. Aucun en-tête fourni par le client. Pas de `Reply-To` : le contact figure dans le pied de page.
+- **Transport** : Nodemailer en mode SMTP uniquement, avec accès fichiers et URL désactivés, une connexion par message (pas de connexion persistante),
+  version épinglée. Mode **stub** : aucun envoi, statut `stubbed`, signalé dans l'interface comme « simulé ».
+- **Désabonnement en un clic** (décision utilisateur, RFC 8058) : **la désinscription supprime aussi les données personnelles** de l'adresse pour les activités de l'envoi.
+  Le pied de page l'annonce : « Se désinscrire (supprime l'inscription et vos données) ». Un clic dans la messagerie ne demande pas de confirmation ; la page `/u/<token>` n'agit qu'après clic.
+- **Confirmation d'inscription** : asynchrone, jamais bloquante. Le nom est tronqué à 60 caractères et échappé. Le jeton de gestion n'est ni journalisé ni stocké.
+- **Historique** : les envois sont purgés avec les inscriptions (`RETENTION_MONTHS`). L'accès au détail d'un envoi est journalisé (`mailing_viewed`).
 
 ## Données personnelles (RGPD)
 
@@ -92,19 +113,48 @@ Les fichiers `.env`, `qualif.env` et `prod.env` ne sont jamais commités. Les fi
 - **Adresses IP en clair** dans les journaux d'authentification et d'inscription (I2) : rétention courte à appliquer côté exploitation (30 jours).
 - **Caractères de contrôle Unicode** (ZWJ, ZWNJ) refusés dans les noms (I1) : choix prudent, à revoir si des utilisateurs s'en plaignent.
 - **Compteurs de limites en mémoire** (I-a) : voir ci-dessus.
+- **Désabonnement one-click destructif** : un clic dans la messagerie supprime l'inscription et les données. Décision utilisateur, confirmée.
+  Le risque est qu'un utilisateur veuille seulement arrêter les e-mails. Mitigation : libellé explicite du pied de page et de la page de confidentialité.
+- **Lien de désabonnement rattaché à une seule inscription** : si cette inscription est supprimée seule, le lien devient « introuvable » alors que d'autres inscriptions de l'adresse subsistent.
+  Le parent peut utiliser son lien de gestion. Rattacher par adresse obligerait à conserver l'e-mail après anonymisation.
+- **Pas de double opt-in** pour les confirmations d'inscription : une adresse saisie par un tiers reçoit la confirmation (plafonnée).
+- **Un envoi par connexion SMTP** : coût en temps (plusieurs minutes pour 500 destinataires), pas de risque de sécurité. Reconsidérer si un fournisseur limite les connexions.
+- **Envoi interrompu au redémarrage** : jamais repris, pour éviter les doublons. Les destinataires restants sont visibles en `failed` (`interrupted`).
 
 ## Points à traiter
 
 1. **Avant PROD — `TRUST_PROXY`** : renseigner le nombre réel de proxys (ex. `1`) derrière un reverse proxy TLS, et vérifier que le proxy
    écrase `X-Forwarded-For` entrant. Le serveur émet un avertissement au démarrage si la production est en HTTPS sans `TRUST_PROXY`.
-   Les exemples `qualif.env.example` et `prod.env.example` ont encore `TRUST_PROXY=0`.
+   Les exemples `qualif.env.example` et `prod.env.example` ont encore `TRUST_PROXY=0` (à corriger avant PROD).
 2. **Avant PROD — journaux du reverse proxy** : son journal d'accès contient `/r/<token>`. Masquer le chemin ou le jeton, et limiter la rétention à 30 jours au plus.
    Cette mesure relève du déploiement, pas de l'application.
 3. **Avant PROD — rétention des IP** : 30 jours au plus dans les journaux de l'application.
 4. **Réinitialisation de mot de passe** : aucune fonction en v1. À prévoir (`user:reset-password`), avec révocation des sessions du compte.
 5. **Décision F-a** : garder la clé e-mail seule, ou passer à une clé `e-mail + IP`, ou assouplir le seuil (ex. 10 échecs).
 6. **Droits des responsables** (RGPD) : à rouvrir si le rôle doit différencier les actions (suppression de données, export).
-7. **LOT-4** : échappement HTML des e-mails avant l'envoi groupé ; vérification de la rétention des envois (`mailing_recipients`).
+7. **Checklist PROD** : voir la section dédiée ci-dessous (DKIM sur `List-Unsubscribe`, HTTPS, SPF/DMARC, `TRUST_PROXY`, journaux du proxy).
+
+## Checklist PROD (e-mails et déploiement)
+
+À valider avant la mise en production. Les points marqués **bloquant** ne doivent pas être ignorés.
+
+| # | Contrôle | Bloquant |
+|---|----------|----------|
+| 1 | `APP_BASE_URL` en **HTTPS** : les en-têtes `List-Unsubscribe` et le lien de désabonnement l'exigent (RFC 8058). | oui |
+| 2 | **DKIM** : le relais signe les en-têtes `List-Unsubscribe` et `List-Unsubscribe-Post`. Vérifier avec un message réel. | oui |
+| 3 | **SPF** du domaine de `MAIL_FROM` inclut le serveur SMTP. **DMARC** publié (`p=none` puis `quarantine`). Alignement du `From`. | oui |
+| 4 | `SMTP_REQUIRE_TLS` non désactivé ; `SMTP_USER` et `SMTP_PASS` dans un coffre de secrets, jamais dans le dépôt. Compte SMTP dédié, privilège minimal. | oui |
+| 5 | `TRUST_PROXY` renseigné avec le nombre réel de proxys (ex. `1`). Les fichiers `qualif.env.example` et `prod.env.example` ont encore `TRUST_PROXY=0` : à corriger. Vérifier que le proxy écrase `X-Forwarded-For`. | oui |
+| 6 | Journal d'accès du reverse proxy : masquer `/r/<token>`, `/u/<token>` et `/api/public/*/<token>`, rétention 30 jours au plus. | oui |
+| 7 | Journaux de l'application : adresses IP en clair dans les événements d'authentification et d'inscription. Rétention 30 jours au plus. | non |
+| 8 | `stop_grace_period: 60s` dans `docker-compose.prod.yml` pour laisser un envoi se clore à l'arrêt. | non |
+| 9 | `CONTACT_EMAIL` renseigné (adresse de contact réelle, jamais `ADMIN_EMAIL`). | oui |
+| 10 | `MAIL_FROM` validé au démarrage ; pas de mode stub en production (avertissement au démarrage à lire). | oui |
+| 11 | `ADMIN_PASSWORD` non trivial, `SESSION_SECRET` ≥ 32 caractères. Le compte initial n'est pas le compte de production définitif. | oui |
+| 12 | Mono-instance : deux instances en parallèle ne sont pas supportées (compteurs de limites et envois). À revoir avant tout passage multi-instances. | oui |
+| 13 | Décision produit confirmée : désabonnement en un clic = désinscription et suppression des données. | oui |
+| 14 | Secrets E2E de `playwright.config.ts` (valeurs de test) jamais utilisés hors du serveur local des tests. | oui |
+| 15 | `npm audit --audit-level=high` sans vulnérabilité, avant chaque mise en production. | oui |
 
 ## Signalement
 

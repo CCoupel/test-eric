@@ -46,7 +46,15 @@ Socle du milestone v0.1.0 (non publié à ce stade).
 - Retrait d'un inscrit par le responsable, avec suppression physique des données.
 - Purge RGPD : `npm run data:purge`, automatique au démarrage puis toutes les 24 heures ; durée `RETENTION_MONTHS` (défaut 12).
 - Variables `CONTACT_EMAIL`, `RETENTION_MONTHS` et `RATE_LIMIT_*` (`.env.example`, `contracts/models.md`).
-- Migrations 006 (inscriptions, envois) et 007 (trigger d'anonymisation).
+- Migrations 006 (inscriptions, envois) et 007 (trigger d'anonymisation), 008 (jetons de désabonnement, empreinte des envois).
+- E-mails groupés : composer un envoi à partir d'une ou plusieurs activités, aperçu du nombre de destinataires, historique des envois avec statut par destinataire.
+- Envoi SMTP via Nodemailer (version épinglée) ; mode stub par défaut, sans envoi réel, signalé dans l'interface.
+- Désabonnement en un clic (RFC 8058) : en-têtes `List-Unsubscribe` et `List-Unsubscribe-Post`, page `/u/<token>`. Le clic désinscrit l'adresse
+  et supprime ses données pour les activités de l'envoi.
+- E-mail de confirmation après chaque inscription, asynchrone, avec le lien de gestion.
+- Purge de l'historique des envois avec les inscriptions (`RETENTION_MONTHS`).
+- Variables `SMTP_*`, `MAIL_FROM`, `CONTACT_EMAIL`, `MAILING_*`, `SMTP_REQUIRE_TLS` et limites d'envoi (`RATE_LIMIT_MAILING_*`, `RATE_LIMIT_CONFIRMATION_*`, `RATE_LIMIT_UNSUBSCRIBE_*`).
+- Documentation : `docs/EMAIL.md` (configuration, fournisseurs, délivrabilité, dépannage).
 
 ### Security
 - Jeton de gestion d'inscription : 256 bits, stocké haché (SHA-256) seul ; réponse identique pour un jeton inconnu, invalide ou supprimé.
@@ -58,6 +66,15 @@ Socle du milestone v0.1.0 (non publié à ce stade).
 - Inscription refusée dès que l'activité a commencé (409 `activity_closed`).
 - Version du consentement liée au texte : un test échoue si le texte change sans changement de version.
 - Limite de connexion par IP configurable (`RATE_LIMIT_LOGIN_PER_IP_MIN`, défaut 10), plafonnée à 50 en production.
+- E-mails groupés : en-tête `From` toujours `MAIL_FROM` (validé au démarrage) ; schémas stricts (`strictObject`) ; sujet et corps sans caractères de contrôle ;
+  `To` unique par message, pas de `Bcc`/`Cc` ; corps échappé avant rendu HTML.
+- E-mails groupés : identifiants SMTP jamais journalisés ni renvoyés ; erreurs de transport réduites à un code (`timeout`, `connection`, `auth`, `rejected`, `other`).
+- E-mails groupés : TLS vérifié et imposé (`SMTP_REQUIRE_TLS`) ; timeouts de 10 secondes.
+- E-mails groupés : anti-abus : 500 destinataires maximum, un envoi à la fois (verrou), anti-doublon 5 minutes, 5 envois par 10 minutes et par responsable,
+  disjoncteur après 5 échecs d'infrastructure, envois orphelins clos au démarrage et jamais repris.
+- E-mails groupés : jeton de désabonnement haché (SHA-256), usage unique ; anonymisation à la désinscription, au désabonnement et à la purge.
+- E-mails de confirmation plafonnés (3 par heure et par adresse, 300 par heure au total) ; aucun e-mail pour le honeypot.
+- Journal des envois et des consultations de détail (`mailing_sent`, `mailing_viewed`) sans donnée personnelle.
 - Révocation des sessions : le logout invalide toutes les sessions du compte (claim `tv`, migration 005).
 - Vérification stricte de `Origin` sur les requêtes modifiantes de `/api`, y compris `Sec-Fetch-Site: cross-site`.
 - Limite de connexion par e-mail (5 échecs / 15 min), en plus de la limite par IP (10 / min).
